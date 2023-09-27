@@ -35,6 +35,6 @@ func Cross(v1, v2 Vector) Vector {
 }
 
 func UnitVector(v Vector) Vector {
-	v.Divide(v.Length())
-	return v
+	return v.Divide(v.Length())
+
 }

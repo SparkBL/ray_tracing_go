@@ -3,21 +3,24 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"log"
+	"math"
 	"os"
 	"ray_tracing/ray"
 	"ray_tracing/vector"
-
-	"log"
 )
 
 func main() {
 
 	//Image
 	aspectRatio := 16.0 / 9.0
-	imageWidth := 400
+	imageWidth := 450
 
 	//Calc image height
 	imageHeight := int(float64(imageWidth) / aspectRatio)
+	if imageHeight < 1 {
+		imageHeight = 1
+	}
 
 	//Camera
 	focalLength := 1.0
@@ -49,42 +52,51 @@ func main() {
 	})
 }
 
-func OutputImage(width, height int) {
-	out, _ := os.Create("test.ppm")
-	logger := bufio.NewWriter(os.Stdout)
-	out.WriteString(fmt.Sprintf("P3\n%d %d\n255\n", width, height))
-	for i := 0; i < height; i++ {
-		logger.WriteString(fmt.Sprintf("\rScanlines remaining: %d ", height-i))
-		logger.Flush()
-		for j := 0; j < width; j++ {
-			c := vector.Vector{
-				float64(j) / (float64(width) - 1),
-				float64(i) / (float64(height) - 1),
-				float64(0)}
+// func OutputImage(width, height int) {
+// 	out, _ := os.Create("test.ppm")
+// 	logger := bufio.NewWriter(os.Stdout)
+// 	out.WriteString(fmt.Sprintf("P3\n%d %d\n255\n", width, height))
+// 	for i := 0; i < height; i++ {
+// 		logger.WriteString(fmt.Sprintf("\rScanlines remaining: %d ", height-i))
+// 		logger.Flush()
+// 		for j := 0; j < width; j++ {
+// 			c := vector.Vector{
+// 				float64(j) / (float64(width) - 1),
+// 				float64(i) / (float64(height) - 1),
+// 				float64(0)}
 
-			out.WriteString(vector.ColorString(&c))
-		}
-	}
-	out.Close()
-	logger.Flush()
-}
+// 			out.WriteString(vector.ColorString(&c))
+// 		}
+// 	}
+// 	out.Close()
+// 	logger.Flush()
+// }
 
 func RayColor(r ray.Ray) vector.Color {
-	if HitSphere(vector.Point{0, 0, -1}, 0.5, r) {
-		return vector.Color{1, 0, 0}
+	t := HitSphere(vector.Point{0, 0, -1}, 0.5, r)
+
+	if t > 0.0 {
+		N := vector.UnitVector(r.At(t).Add(vector.Vector{0, 0, -1}.Negative()))
+		return vector.Color{N.X() + 1, N.Y() + 1, N.Z() + 1}.Multiply(0.5)
 	}
 	unitDirection := vector.UnitVector(r.Direction)
 	a := 0.5 * (unitDirection.Y() + 1.0)
-	return vector.Color{1.0, 1.0, 1.0}.Multiply(1.0 - a).Add(vector.Color{0.5, 0.7, 1.0}.Multiply(a))
+	return vector.Color{1.0, 1.0, 1.0}.
+		Multiply(1.0 - a).
+		Add(vector.Color{0.5, 0.7, 1.0}.Multiply(a))
 }
 
-func HitSphere(center vector.Point, radius float64, ray ray.Ray) bool {
+func HitSphere(center vector.Point, radius float64, ray ray.Ray) float64 {
 	ocDistance := ray.Origin.Add(center.Negative())
 	a := vector.Dot(ray.Direction, ray.Direction)
 	b := 2.0 * vector.Dot(ocDistance, ray.Direction)
 	c := vector.Dot(ocDistance, ocDistance) - radius*radius
 	discriminant := b*b - 4.0*a*c
-	return discriminant >= 0
+	if discriminant < 0 {
+		return -1.0
+	} else {
+		return (-b - math.Sqrt(discriminant)) / (2.0 * a)
+	}
 }
 
 type RenderImageOption struct {

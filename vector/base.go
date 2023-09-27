@@ -12,11 +12,11 @@ func (v Vector) X() float64 {
 }
 
 func (v Vector) Y() float64 {
-	return v[0]
+	return v[1]
 }
 
 func (v Vector) Z() float64 {
-	return v[0]
+	return v[2]
 }
 
 func (v Vector) Negative() Vector {
