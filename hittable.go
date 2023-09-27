@@ -7,7 +7,7 @@ import (
 )
 
 type Hittable interface {
-	Hit(r ray.Ray, tMin, tMax float64, rec *HitRecord) bool
+	Hit(r ray.Ray, rayT Interval, rec *HitRecord) bool
 }
 
 type HitRecord struct {
@@ -34,7 +34,7 @@ type Sphere struct {
 	Radius float64
 }
 
-func (s *Sphere) Hit(r ray.Ray, tMin, tMax float64, rec *HitRecord) bool {
+func (s *Sphere) Hit(r ray.Ray, rayT Interval, rec *HitRecord) bool {
 	ocDistance := r.Origin.Add(s.Center.Negative())
 	a := r.Direction.LengthSquared()
 	halfB := vector.Dot(ocDistance, r.Direction)
@@ -47,9 +47,9 @@ func (s *Sphere) Hit(r ray.Ray, tMin, tMax float64, rec *HitRecord) bool {
 	sqrtd := math.Sqrt(discriminant)
 	root := (-halfB - sqrtd) / a
 
-	if root <= tMin || tMax <= root {
+	if !rayT.Surrounds(root) {
 		root = (-halfB + sqrtd) / a
-		if root <= tMin || tMax <= root {
+		if !rayT.Surrounds(root) {
 			return false
 		}
 	}
@@ -60,13 +60,25 @@ func (s *Sphere) Hit(r ray.Ray, tMin, tMax float64, rec *HitRecord) bool {
 	return true
 }
 
-type HittableList []Hittable
+type Hittables struct {
+	objects []Hittable
+}
 
-func (hl HittableList) Hit(r ray.Ray, tMin, tMax float64, rec *HitRecord) bool {
+func (hl *Hittables) Append(o ...Hittable) {
+	hl.objects = append(hl.objects, o...)
+}
+
+func NewWorld(o ...Hittable) *Hittables {
+	return &Hittables{
+		objects: o,
+	}
+}
+
+func (hl *Hittables) Hit(r ray.Ray, rayT Interval, rec *HitRecord) bool {
 	hitAnything := false
-	closestSoFar := tMax
-	for _, h := range hl {
-		if h.Hit(r, tMin, closestSoFar, rec) {
+	closestSoFar := rayT.Max
+	for _, h := range hl.objects {
+		if h.Hit(r, Interval{rayT.Min, closestSoFar}, rec) {
 			hitAnything = true
 			closestSoFar = rec.T
 		}
