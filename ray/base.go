@@ -8,5 +8,5 @@ type Ray struct {
 }
 
 func (r *Ray) At(t float64) vector.Point {
-	return vector.Add(r.Origin, r.Direction.Multiply(t))
+	return r.Origin.Add(r.Direction.Multiply(t))
 }
