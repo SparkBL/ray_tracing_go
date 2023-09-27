@@ -1,13 +1,9 @@
 package main
 
 import (
-	"fmt"
-	"time"
+	"math"
 )
 
-func timer(name string) func() {
-	start := time.Now()
-	return func() {
-		fmt.Printf("%s took %v\n", name, time.Since(start))
-	}
+func DegressToRadians(degrees float64) float64 {
+	return degrees * math.Pi / 180.0
 }

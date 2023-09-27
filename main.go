@@ -8,14 +8,16 @@ import (
 	"os"
 	"ray_tracing/ray"
 	"ray_tracing/vector"
+	"runtime/debug"
 	"time"
 )
 
 func main() {
+	debug.SetGCPercent(-1)
 	start := time.Now()
 	//Image
 	aspectRatio := 16.0 / 9.0
-	imageWidth := 400
+	imageWidth := 1000
 
 	//Calc image height
 	imageHeight := int(float64(imageWidth) / aspectRatio)
@@ -23,14 +25,27 @@ func main() {
 		imageHeight = 1
 	}
 
+	//World
+	world := HittableList{}
+	world = append(world,
+		&Sphere{
+			Center: vector.Point{0, 0, -1},
+			Radius: 0.5},
+		&Sphere{
+			Center: vector.Point{0, -100.5, -1},
+			Radius: 100},
+	)
+
 	//Camera
 	focalLength := 1.0
 	viewportHeight := 2.0 //think as matrix
 	viewportWidth := viewportHeight * (float64(imageWidth) / float64(imageHeight))
 	camerCenter := vector.Point{0, 0, 0}
+
 	// Calculate the vectors across the horizontal and down the vertical viewport edges.
 	viewportU := vector.Vector{viewportWidth, 0, 0}
 	viewportV := vector.Vector{0, -viewportHeight, 0}
+
 	// Calculate the horizontal and vertical delta vectors from pixel to pixel.
 	pixelDeltaU := viewportU.Divide(float64(imageWidth))
 	pixelDeltaV := viewportV.Divide(float64(imageHeight))
@@ -50,6 +65,7 @@ func main() {
 		PixelDeltaV:       pixelDeltaV,
 		Width:             imageWidth,
 		Height:            imageHeight,
+		World:             world,
 	})
 	fmt.Println(time.Since(start))
 }
@@ -74,12 +90,11 @@ func main() {
 // 	logger.Flush()
 // }
 
-func RayColor(r ray.Ray) vector.Color {
-	t := HitSphere(vector.Point{0, 0, -1}, 0.5, r)
+func RayColor(r ray.Ray, world Hittable) vector.Color {
+	rec := HitRecord{}
 
-	if t > 0.0 {
-		N := vector.UnitVector(r.At(t).Add(vector.Vector{0, 0, -1}.Negative()))
-		return vector.Color{N.X() + 1, N.Y() + 1, N.Z() + 1}.Multiply(0.5)
+	if world.Hit(r, 0, math.Inf(1), &rec) {
+		return rec.Normal.Add(vector.Color{1, 1, 1}).Multiply(0.5)
 	}
 	unitDirection := vector.UnitVector(r.Direction)
 	a := 0.5 * (unitDirection.Y() + 1.0)
@@ -88,20 +103,8 @@ func RayColor(r ray.Ray) vector.Color {
 		Add(vector.Color{0.5, 0.7, 1.0}.Multiply(a))
 }
 
-func HitSphere(center vector.Point, radius float64, ray ray.Ray) float64 {
-	ocDistance := ray.Origin.Add(center.Negative())
-	a := vector.Dot(ray.Direction, ray.Direction)
-	b := 2.0 * vector.Dot(ocDistance, ray.Direction)
-	c := vector.Dot(ocDistance, ocDistance) - radius*radius
-	discriminant := b*b - 4.0*a*c
-	if discriminant < 0 {
-		return -1.0
-	} else {
-		return (-b - math.Sqrt(discriminant)) / (2.0 * a)
-	}
-}
-
 type RenderImageOption struct {
+	World             Hittable
 	PixelZeroLocation vector.Vector
 	CameraCenter      vector.Vector
 	PixelDeltaU       vector.Vector
@@ -126,7 +129,7 @@ func OutputRenderedImage(o RenderImageOption) {
 			pixelCenter := o.PixelZeroLocation.Add(o.PixelDeltaU.Multiply(float64(j)).Add(o.PixelDeltaV.Multiply(float64(i))))
 			rayDirection := pixelCenter.Add(o.CameraCenter.Negative())
 			r := ray.Ray{Origin: o.CameraCenter, Direction: rayDirection}
-			color := RayColor(r)
+			color := RayColor(r, o.World)
 			out.WriteString(vector.ColorString(&color))
 		}
 	}
