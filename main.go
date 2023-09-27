@@ -8,13 +8,14 @@ import (
 	"os"
 	"ray_tracing/ray"
 	"ray_tracing/vector"
+	"time"
 )
 
 func main() {
-
+	start := time.Now()
 	//Image
 	aspectRatio := 16.0 / 9.0
-	imageWidth := 450
+	imageWidth := 400
 
 	//Calc image height
 	imageHeight := int(float64(imageWidth) / aspectRatio)
@@ -50,6 +51,7 @@ func main() {
 		Width:             imageWidth,
 		Height:            imageHeight,
 	})
+	fmt.Println(time.Since(start))
 }
 
 // func OutputImage(width, height int) {

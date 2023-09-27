@@ -7,15 +7,15 @@ import (
 
 type Vector [3]float64
 
-func (v Vector) X() float64 {
+func (v *Vector) X() float64 {
 	return v[0]
 }
 
-func (v Vector) Y() float64 {
+func (v *Vector) Y() float64 {
 	return v[1]
 }
 
-func (v Vector) Z() float64 {
+func (v *Vector) Z() float64 {
 	return v[2]
 }
 
@@ -35,11 +35,11 @@ func (v Vector) Divide(t float64) Vector {
 	return Vector{v[0] * (1 / t), v[1] * (1 / t), v[2] * (1 / t)}
 }
 
-func (v Vector) LengthSquared() float64 {
+func (v *Vector) LengthSquared() float64 {
 	return v[0]*v[0] + v[1]*v[1] + v[2]*v[2]
 }
 
-func (v Vector) Length() float64 {
+func (v *Vector) Length() float64 {
 	return math.Sqrt(v.LengthSquared())
 }
 
