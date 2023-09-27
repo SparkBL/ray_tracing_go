@@ -6,6 +6,7 @@ import (
 )
 
 func main() {
+
 	debug.SetGCPercent(-1)
 
 	//World

@@ -10,7 +10,11 @@ import (
 	"ray_tracing/ray"
 	"ray_tracing/vector"
 	"time"
+
+	"github.com/seehuhn/mt19937"
 )
+
+var randGenerator *rand.Rand = rand.New(mt19937.New())
 
 type Camera struct {
 	aspectRatio       float64
@@ -121,7 +125,7 @@ func (c *Camera) getRay(i, j int) ray.Ray {
 }
 
 func (c *Camera) pixelSampleSquare() vector.Vector {
-	px, py := -0.5+rand.Float64(), -0.5+rand.Float64()
+	px, py := -0.5+randGenerator.Float64(), -0.5+randGenerator.Float64()
 	return c.pixelDeltaU.Multiply(px).Add(c.pixelDeltaV.Multiply(py))
 }
 
