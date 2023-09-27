@@ -51,12 +51,3 @@ func (v Vector) String() string {
 
 type Color = Vector
 type Point = Vector
-
-func ColorString(c *Color) string {
-	return fmt.Sprintf(
-		"%d %d %d\n",
-		int(c[0]*float64(255.999)),
-		int(c[1]*float64(255.999)),
-		int(c[2]*float64(255.999)),
-	)
-}

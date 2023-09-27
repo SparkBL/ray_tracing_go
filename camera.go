@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"math/rand"
 	"os"
 	"ray_tracing/ray"
 	"ray_tracing/vector"
@@ -20,6 +21,8 @@ type Camera struct {
 	pixelDeltaU       vector.Vector
 	pixelDeltaV       vector.Vector
 
+	samplesPerPixel int
+
 	focalLength    float64
 	viewportHeight float64
 	viewportWidth  float64
@@ -30,7 +33,7 @@ type CameraOption func(c *Camera)
 
 func (c *Camera) Init(opts ...CameraOption) {
 	c.aspectRatio = 16.0 / 9.0
-	c.imageWidth = 600
+	c.imageWidth = 400
 	c.imageHeight = int(float64(c.imageWidth) / c.aspectRatio)
 
 	c.focalLength = 1.0
@@ -38,6 +41,8 @@ func (c *Camera) Init(opts ...CameraOption) {
 	c.viewportWidth = c.viewportHeight * (float64(c.imageWidth) / float64(c.imageHeight))
 
 	c.center = vector.Point{0, 0, 0}
+
+	c.samplesPerPixel = 1000
 
 	for _, o := range opts {
 		o(c)
@@ -77,11 +82,12 @@ func (c *Camera) Render(filename string, world Hittable) {
 		c.logger.Flush()
 
 		for j := 0; j < c.imageWidth; j++ {
-			pixelCenter := c.pixelZeroLocation.Add(c.pixelDeltaU.Multiply(float64(j)).Add(c.pixelDeltaV.Multiply(float64(i))))
-			rayDirection := pixelCenter.Add(c.center.Negative())
-			r := ray.Ray{Origin: c.center, Direction: rayDirection}
-			color := c.rayColor(r, world)
-			out.WriteString(vector.ColorString(&color))
+			pixelColor := vector.Color{0, 0, 0}
+			for sample := 0; sample < c.samplesPerPixel; sample++ {
+				r := c.getRay(j, i)
+				pixelColor = pixelColor.Add(c.rayColor(r, world)) //performance boost if pointer
+			}
+			out.WriteString(ColorString(&pixelColor, c.samplesPerPixel))
 		}
 	}
 	out.Close()
@@ -100,4 +106,37 @@ func (c *Camera) rayColor(r ray.Ray, world Hittable) vector.Color {
 	return vector.Color{1.0, 1.0, 1.0}.
 		Multiply(1.0 - a).
 		Add(vector.Color{0.5, 0.7, 1.0}.Multiply(a))
+}
+
+func (c *Camera) getRay(i, j int) ray.Ray {
+	pixelCenter := c.pixelZeroLocation.
+		Add(c.pixelDeltaU.Multiply(float64(i))).
+		Add(c.pixelDeltaV.Multiply(float64(j)))
+
+	pixelSample := pixelCenter.Add(c.pixelSampleSquare())
+	return ray.Ray{
+		Origin:    c.center,
+		Direction: pixelSample.Add(c.center.Negative()),
+	}
+}
+
+func (c *Camera) pixelSampleSquare() vector.Vector {
+	px, py := -0.5+rand.Float64(), -0.5+rand.Float64()
+	return c.pixelDeltaU.Multiply(px).Add(c.pixelDeltaV.Multiply(py))
+}
+
+func ColorString(c *vector.Color, samples int) string {
+
+	scale := 1.0 / float64(samples)
+	r := c.X() * scale
+	g := c.Y() * scale
+	b := c.Z() * scale
+	intensity := Interval{0.000, 0.999}
+
+	return fmt.Sprintf(
+		"%d %d %d\n",
+		int(intensity.Clamp(r)*float64(256)),
+		int(intensity.Clamp(g)*float64(256)),
+		int(intensity.Clamp(b)*float64(256)),
+	)
 }
