@@ -1,6 +1,8 @@
 package main
 
 import (
+	"ray_tracing/camera"
+	"ray_tracing/hittable"
 	"ray_tracing/vector"
 	"runtime/debug"
 )
@@ -10,19 +12,19 @@ func main() {
 	debug.SetGCPercent(-1)
 
 	//World
-	world := NewWorld(
-		&Sphere{
+	world := hittable.NewWorld(
+		&hittable.Sphere{
 			Center: vector.Point{0, 0, -1},
 			Radius: 0.5},
-		&Sphere{
+		&hittable.Sphere{
 			Center: vector.Point{0, -100.5, -1},
 			Radius: 100},
-		&Sphere{
+		&hittable.Sphere{
 			Center: vector.Point{-0.5, 0, -1},
 			Radius: 0.5},
 	)
 
-	camera := Camera{}
+	camera := camera.Camera{}
 	camera.Init()
 	camera.Render("test_ray.ppm", world)
 }

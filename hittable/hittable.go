@@ -1,13 +1,14 @@
-package main
+package hittable
 
 import (
 	"math"
+	"ray_tracing/interval"
 	"ray_tracing/ray"
 	"ray_tracing/vector"
 )
 
 type Hittable interface {
-	Hit(r ray.Ray, rayT Interval, rec *HitRecord) bool
+	Hit(r ray.Ray, rayT interval.Interval, rec *HitRecord) bool
 }
 
 type HitRecord struct {
@@ -21,7 +22,8 @@ func (hr *HitRecord) SetFaceNormal(r ray.Ray, outwardNormal vector.Vector) {
 	// Sets the hit record normal vector.
 	// NOTE: the parameter `outward_normal` is assumed to have unit length.
 
-	if vector.Dot(r.Direction, outwardNormal) < 0 {
+	hr.IsFrontFace = vector.Dot(r.Direction, outwardNormal) < 0
+	if hr.IsFrontFace {
 		hr.Normal = outwardNormal
 	} else {
 		hr.Normal = outwardNormal.Negative()
@@ -34,7 +36,7 @@ type Sphere struct {
 	Radius float64
 }
 
-func (s *Sphere) Hit(r ray.Ray, rayT Interval, rec *HitRecord) bool {
+func (s *Sphere) Hit(r ray.Ray, rayT interval.Interval, rec *HitRecord) bool {
 	ocDistance := r.Origin.Add(s.Center.Negative())
 	a := r.Direction.LengthSquared()
 	halfB := vector.Dot(ocDistance, r.Direction)
@@ -74,11 +76,11 @@ func NewWorld(o ...Hittable) *Hittables {
 	}
 }
 
-func (hl *Hittables) Hit(r ray.Ray, rayT Interval, rec *HitRecord) bool {
+func (hl *Hittables) Hit(r ray.Ray, rayT interval.Interval, rec *HitRecord) bool {
 	hitAnything := false
 	closestSoFar := rayT.Max
 	for _, h := range hl.objects {
-		if h.Hit(r, Interval{rayT.Min, closestSoFar}, rec) {
+		if h.Hit(r, interval.Interval{rayT.Min, closestSoFar}, rec) {
 			hitAnything = true
 			closestSoFar = rec.T
 		}

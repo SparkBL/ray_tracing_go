@@ -1,4 +1,4 @@
-package main
+package camera
 
 import (
 	"bufio"
@@ -7,11 +7,14 @@ import (
 	"math"
 	"math/rand"
 	"os"
+	"ray_tracing/interval"
 	"ray_tracing/ray"
 	"ray_tracing/vector"
 	"time"
 
 	"github.com/seehuhn/mt19937"
+
+	"ray_tracing/hittable"
 )
 
 var randGenerator *rand.Rand = rand.New(mt19937.New())
@@ -46,7 +49,7 @@ func (c *Camera) Init(opts ...CameraOption) {
 
 	c.center = vector.Point{0, 0, 0}
 
-	c.samplesPerPixel = 1000
+	c.samplesPerPixel = 10
 
 	for _, o := range opts {
 		o(c)
@@ -70,7 +73,7 @@ func (c *Camera) Init(opts ...CameraOption) {
 	c.logger = bufio.NewWriter(os.Stdout)
 }
 
-func (c *Camera) Render(filename string, world Hittable) {
+func (c *Camera) Render(filename string, world hittable.Hittable) {
 	start := time.Now()
 	err := os.Remove(filename)
 	if err != nil {
@@ -99,10 +102,10 @@ func (c *Camera) Render(filename string, world Hittable) {
 	c.logger.Flush()
 }
 
-func (c *Camera) rayColor(r ray.Ray, world Hittable) vector.Color {
-	rec := HitRecord{}
+func (c *Camera) rayColor(r ray.Ray, world hittable.Hittable) vector.Color {
+	rec := hittable.HitRecord{}
 
-	if world.Hit(r, Interval{0, math.Inf(1)}, &rec) {
+	if world.Hit(r, interval.Interval{0, math.Inf(1)}, &rec) {
 		return rec.Normal.Add(vector.Color{1, 1, 1}).Multiply(0.5)
 	}
 	unitDirection := vector.UnitVector(r.Direction)
@@ -135,7 +138,7 @@ func ColorString(c *vector.Color, samples int) string {
 	r := c.X() * scale
 	g := c.Y() * scale
 	b := c.Z() * scale
-	intensity := Interval{0.000, 0.999}
+	intensity := interval.Interval{0.000, 0.999}
 
 	return fmt.Sprintf(
 		"%d %d %d\n",
