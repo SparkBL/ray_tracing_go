@@ -90,7 +90,7 @@ func (c *Camera) Render(filename string, world hittable.Hittable) {
 			select {
 			case s := <-output:
 				buf.WriteString(s)
-				if buf.Len() > 100 {
+				if buf.Len() > 1000 {
 					out.WriteString(buf.String())
 					buf.Reset()
 				}
