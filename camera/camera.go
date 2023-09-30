@@ -115,6 +115,7 @@ func (c *Camera) Render(filename string, world hittable.Hittable) {
 			output <- ColorString(&pixelColor, c.samplesPerPixel)
 		}
 	}
+	quit <- true
 
 	c.logger.WriteString(fmt.Sprintf("\relapsed: %v\n", time.Since(start)))
 	c.logger.Flush()
