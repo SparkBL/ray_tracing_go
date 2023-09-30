@@ -10,6 +10,7 @@ import (
 	"ray_tracing/interval"
 	"ray_tracing/ray"
 	"ray_tracing/vector"
+	"strings"
 	"time"
 
 	"github.com/seehuhn/mt19937"
@@ -79,9 +80,26 @@ func (c *Camera) Render(filename string, world hittable.Hittable) {
 	if err != nil {
 		log.Println(err)
 	}
-	out, _ := os.Create(filename)
+	var output chan string = make(chan string, 3)
+	var quit chan bool = make(chan bool)
+	go func(chan string, chan bool) {
+		out, _ := os.Create(filename)
+		var buf strings.Builder = strings.Builder{}
+		out.WriteString(fmt.Sprintf("P3\n%d %d\n255\n", c.imageWidth, c.imageHeight))
+		for {
+			select {
+			case s := <-output:
+				buf.WriteString(s)
+				if buf.Len() > 100 {
+					out.WriteString(buf.String())
+					buf.Reset()
+				}
 
-	out.WriteString(fmt.Sprintf("P3\n%d %d\n255\n", c.imageWidth, c.imageHeight))
+			case <-quit:
+				out.Close()
+			}
+		}
+	}(output, quit)
 
 	for i := 0; i < c.imageHeight; i++ {
 
@@ -94,10 +112,10 @@ func (c *Camera) Render(filename string, world hittable.Hittable) {
 				r := c.getRay(j, i)
 				pixelColor = pixelColor.Add(c.rayColor(r, world)) //performance boost if pointer
 			}
-			out.WriteString(ColorString(&pixelColor, c.samplesPerPixel))
+			output <- ColorString(&pixelColor, c.samplesPerPixel)
 		}
 	}
-	out.Close()
+
 	c.logger.WriteString(fmt.Sprintf("\relapsed: %v\n", time.Since(start)))
 	c.logger.Flush()
 }
