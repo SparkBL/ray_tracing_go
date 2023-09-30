@@ -9,6 +9,7 @@ import (
 	"os"
 	"ray_tracing/interval"
 	"ray_tracing/ray"
+	"ray_tracing/util"
 	"ray_tracing/vector"
 	"strings"
 	"time"
@@ -30,6 +31,7 @@ type Camera struct {
 	pixelDeltaV       vector.Vector
 
 	samplesPerPixel int
+	maxRayDepth     int
 
 	focalLength    float64
 	viewportHeight float64
@@ -41,7 +43,7 @@ type CameraOption func(c *Camera)
 
 func (c *Camera) Init(opts ...CameraOption) {
 	c.aspectRatio = 16.0 / 9.0
-	c.imageWidth = 400
+	c.imageWidth = 800
 	c.imageHeight = int(float64(c.imageWidth) / c.aspectRatio)
 
 	c.focalLength = 1.0
@@ -51,6 +53,7 @@ func (c *Camera) Init(opts ...CameraOption) {
 	c.center = vector.Point{0, 0, 0}
 
 	c.samplesPerPixel = 10
+	c.maxRayDepth = 50
 
 	for _, o := range opts {
 		o(c)
@@ -110,7 +113,7 @@ func (c *Camera) Render(filename string, world hittable.Hittable) {
 			pixelColor := vector.Color{0, 0, 0}
 			for sample := 0; sample < c.samplesPerPixel; sample++ {
 				r := c.getRay(j, i)
-				pixelColor = pixelColor.Add(c.rayColor(r, world)) //performance boost if pointer
+				pixelColor = pixelColor.Add(c.rayColor(r, c.maxRayDepth, world)) //performance boost if pointer
 			}
 			output <- ColorString(&pixelColor, c.samplesPerPixel)
 		}
@@ -121,11 +124,22 @@ func (c *Camera) Render(filename string, world hittable.Hittable) {
 	c.logger.Flush()
 }
 
-func (c *Camera) rayColor(r ray.Ray, world hittable.Hittable) vector.Color {
+func (c *Camera) rayColor(r ray.Ray, depth int, world hittable.Hittable) vector.Color {
 	rec := hittable.HitRecord{}
+	// If we've exceeded the ray bounce limit, no more light is gathered.
+	if depth <= 0 {
+		return vector.Color{0, 0, 0}
+	}
 
-	if world.Hit(r, interval.Interval{0, math.Inf(1)}, &rec) {
-		return rec.Normal.Add(vector.Color{1, 1, 1}).Multiply(0.5)
+	if world.Hit(r, interval.Interval{0.001, math.Inf(1)}, &rec) {
+		if ok, scattered, attenuation := rec.Material.Scatter(r, &rec); ok {
+			return vector.Multiply(attenuation, c.rayColor(scattered, depth-1, world))
+		}
+		return vector.Color{0, 0, 0}
+		//	direction := vector.RandomOnHemisphere(rec.Normal) //Random
+		//direction := rec.Normal.Add(vector.RandomUnitVector()) //Lambertian
+		//return c.rayColor(ray.Ray{Origin: rec.Point, Direction: direction}, depth-1, world).Multiply(0.5)
+
 	}
 	unitDirection := vector.UnitVector(r.Direction)
 	a := 0.5 * (unitDirection.Y() + 1.0)
@@ -153,10 +167,10 @@ func (c *Camera) pixelSampleSquare() vector.Vector {
 
 func ColorString(c *vector.Color, samples int) string {
 
-	scale := 1.0 / float64(samples)
-	r := c.X() * scale
-	g := c.Y() * scale
-	b := c.Z() * scale
+	scale := 1.0 / float64(samples) //get avg of samples
+	r := util.LinearToGamma(c.X() * scale)
+	g := util.LinearToGamma(c.Y() * scale)
+	b := util.LinearToGamma(c.Z() * scale)
 	intensity := interval.Interval{0.000, 0.999}
 
 	return fmt.Sprintf(

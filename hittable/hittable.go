@@ -7,13 +7,10 @@ import (
 	"ray_tracing/vector"
 )
 
-type Hittable interface {
-	Hit(r ray.Ray, rayT interval.Interval, rec *HitRecord) bool
-}
-
 type HitRecord struct {
 	Point       vector.Point
 	Normal      vector.Vector
+	Material    Material
 	T           float64
 	IsFrontFace bool
 }
@@ -31,9 +28,14 @@ func (hr *HitRecord) SetFaceNormal(r ray.Ray, outwardNormal vector.Vector) {
 
 }
 
+type Hittable interface {
+	Hit(r ray.Ray, rayT interval.Interval, rec *HitRecord) bool
+}
+
 type Sphere struct {
-	Center vector.Point
-	Radius float64
+	Center   vector.Point
+	Radius   float64
+	Material Material
 }
 
 func (s *Sphere) Hit(r ray.Ray, rayT interval.Interval, rec *HitRecord) bool {
@@ -59,6 +61,7 @@ func (s *Sphere) Hit(r ray.Ray, rayT interval.Interval, rec *HitRecord) bool {
 	rec.Point = r.At(rec.T)
 	outwardNormal := rec.Point.Add(s.Center.Negative()).Divide(s.Radius)
 	rec.SetFaceNormal(r, outwardNormal)
+	rec.Material = s.Material
 	return true
 }
 

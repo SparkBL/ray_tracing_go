@@ -43,6 +43,10 @@ func (v *Vector) Length() float64 {
 	return math.Sqrt(v.LengthSquared())
 }
 
+func (v *Vector) IsCloseToZero() bool {
+	return v[0] < 1e-8 && v[1] < 1e-8 && v[2] < 1e-8
+}
+
 func (v Vector) String() string {
 	return fmt.Sprintf("%f %f %f", v[0], v[1], v[2])
 }

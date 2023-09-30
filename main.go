@@ -12,16 +12,28 @@ func main() {
 	debug.SetGCPercent(-1)
 
 	//World
+	materialGround := hittable.Lambertian{Albedo: vector.Color{0.8, 0.8, 0.0}}
+	materialCenter := hittable.Lambertian{Albedo: vector.Color{0.7, 0.3, 0.3}}
+	materialLeft := hittable.Metal{Albedo: vector.Color{1, 1, 1}, Fuzziness: 0.2}
+	materialRight := hittable.Metal{Albedo: vector.Color{1, 1, 1}, Fuzziness: 1.0}
+
 	world := hittable.NewWorld(
 		&hittable.Sphere{
-			Center: vector.Point{0, 0, -1},
-			Radius: 0.5},
+			Center:   vector.Point{0, -100.5, -1},
+			Material: &materialGround,
+			Radius:   100},
 		&hittable.Sphere{
-			Center: vector.Point{0, -100.5, -1},
-			Radius: 100},
+			Center:   vector.Point{0, 0, -1},
+			Material: &materialCenter,
+			Radius:   0.5},
 		&hittable.Sphere{
-			Center: vector.Point{-0.5, 0, -1},
-			Radius: 0.5},
+			Center:   vector.Point{-1.0, 0, -1},
+			Material: &materialLeft,
+			Radius:   0.5},
+		&hittable.Sphere{
+			Center:   vector.Point{1.0, 0, -1},
+			Material: &materialRight,
+			Radius:   0.5},
 	)
 
 	camera := camera.Camera{}
