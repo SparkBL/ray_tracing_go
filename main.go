@@ -35,9 +35,9 @@ func main() {
 			Material: &materialRight,
 			Radius:   0.5},
 		&hittable.Plane{
-			Center:   vector.Point{0, 0, -1},
+			Center:   vector.Point{0, 0, -1.5},
 			Material: &materialCenter,
-			Normal:   vector.Vector{0, 0.5, 0}},
+			Normal:   vector.Vector{0, 0.5, 0.3}},
 	)
 
 	camera := camera.Camera{}

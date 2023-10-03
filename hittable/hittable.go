@@ -82,7 +82,7 @@ func (s *Plane) Hit(r ray.Ray, rayT interval.Interval, rec *HitRecord) bool {
 	}
 	rec.T = root
 	rec.Point = r.At(rec.T)
-	outwardNormal := rec.Point.Add(s.Center.Negative()).Divide(root)
+	outwardNormal := rec.Point.Add(s.Center.Negative()).Divide(denominator)
 	rec.SetFaceNormal(r, outwardNormal)
 	rec.Material = s.Material
 
