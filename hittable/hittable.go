@@ -65,6 +65,30 @@ func (s *Sphere) Hit(r ray.Ray, rayT interval.Interval, rec *HitRecord) bool {
 	return true
 }
 
+type Plane struct {
+	Center   vector.Point
+	Normal   vector.Vector
+	Material Material
+}
+
+func (s *Plane) Hit(r ray.Ray, rayT interval.Interval, rec *HitRecord) bool {
+	denominator := vector.Dot(s.Normal, r.Direction)
+	if math.Abs(denominator) < 0.0 {
+		return false
+	}
+	root := vector.Dot(s.Center.Add(r.Origin.Negative()), s.Normal) / denominator
+	if !rayT.Surrounds(root) {
+		return false
+	}
+	rec.T = root
+	rec.Point = r.At(rec.T)
+	outwardNormal := rec.Point.Add(s.Center.Negative())
+	rec.SetFaceNormal(r, outwardNormal)
+	rec.Material = s.Material
+
+	return true
+}
+
 type Hittables struct {
 	objects []Hittable
 }
