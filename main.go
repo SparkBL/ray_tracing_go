@@ -4,18 +4,18 @@ import (
 	"ray_tracing/camera"
 	"ray_tracing/hittable"
 	"ray_tracing/vector"
-	"runtime/debug"
 )
 
 func main() {
 
-	debug.SetGCPercent(-1)
+	// debug.SetGCPercent(-1)
 
 	//World
 	materialGround := hittable.Lambertian{Albedo: vector.Color{0.8, 0.8, 0.0}}
-	materialCenter := hittable.Lambertian{Albedo: vector.Color{0.7, 0.3, 0.3}}
-	materialLeft := hittable.Metal{Albedo: vector.Color{1, 1, 1}, Fuzziness: 0.2}
-	materialRight := hittable.Metal{Albedo: vector.Color{1, 1, 1}, Fuzziness: 1.0}
+	materialCenter := hittable.Lambertian{Albedo: vector.Color{0.1, 0.2, 0.5}}
+	// materialLeft := hittable.Metal{Albedo: vector.Color{1, 1, 1}, Fuzziness: 0.2}
+	materialLeft := hittable.Dielectric{1.5}
+	materialRight := hittable.Metal{Albedo: vector.Color{0.8, 0.6, 0.2}, Fuzziness: 0.0}
 
 	world := hittable.NewWorld(
 		&hittable.Sphere{
@@ -34,10 +34,10 @@ func main() {
 			Center:   vector.Point{1.0, 0, -1},
 			Material: &materialRight,
 			Radius:   0.5},
-		&hittable.Plane{
-			Center:   vector.Point{0, 0, -1.5},
-			Material: &materialCenter,
-			Normal:   vector.Vector{0, 0.5, 0.3}},
+		// &hittable.Plane{
+		// 	Center:   vector.Point{0, 0, -1.5},
+		// 	Material: &materialCenter,
+		// 	Normal:   vector.Vector{0, 0.5, 0.3}},
 	)
 
 	camera := camera.Camera{}

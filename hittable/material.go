@@ -1,6 +1,7 @@
 package hittable
 
 import (
+	"math"
 	"ray_tracing/ray"
 	"ray_tracing/vector"
 )
@@ -49,5 +50,30 @@ func (l *Metal) Scatter(rIn ray.Ray, rec *HitRecord) (bool, ray.Ray, vector.Colo
 	reflected := vector.Reflect(vector.UnitVector(rIn.Direction), rec.Normal)
 	scattered := ray.Ray{Origin: rec.Point, Direction: reflected.Add(vector.RandomUnitVector().Multiply(l.Fuzziness))}
 	return vector.Dot(scattered.Direction, rec.Normal) > 0.0, scattered, l.Albedo
+
+}
+
+type Dielectric struct {
+	IR float64 //Refraction Index
+}
+
+func (d *Dielectric) Scatter(rIn ray.Ray, rec *HitRecord) (bool, ray.Ray, vector.Color) {
+
+	attenuation := vector.Color{1, 1, 1}
+	refractionRatio := d.IR
+	if rec.IsFrontFace {
+		refractionRatio = 1.0 / d.IR
+	}
+	unitDirection := vector.UnitVector(rIn.Direction)
+	cosTheta := math.Min(vector.Dot(unitDirection.Negative(), rec.Normal), 1.0)
+	sinTheta := math.Sqrt(1.0 - cosTheta*cosTheta)
+	direction := vector.Vector{}
+	if refractionRatio*sinTheta > 1.0 {
+		direction = vector.Reflect(unitDirection, rec.Normal)
+	} else {
+		direction = vector.Refract(unitDirection, rec.Normal, refractionRatio)
+	}
+	scattered := ray.Ray{rec.Point, direction}
+	return true, scattered, attenuation
 
 }

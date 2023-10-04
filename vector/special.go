@@ -1,6 +1,7 @@
 package vector
 
 import (
+	"math"
 	"math/rand"
 
 	"github.com/seehuhn/mt19937"
@@ -53,4 +54,11 @@ func RandomOnHemisphere(normal Vector) Vector {
 
 func Reflect(v, n Vector) Vector {
 	return v.Add(n.Multiply(Dot(v, n) * 2).Negative())
+}
+
+func Refract(v, n Vector, et float64) Vector {
+	cosTheta := math.Min(Dot(v.Negative(), n), 1.0)
+	rOutPerp := v.Add(n.Multiply(cosTheta)).Multiply(et)
+	rOutParallel := n.Multiply(-math.Sqrt(math.Abs(1 - rOutPerp.LengthSquared())))
+	return rOutPerp.Add(rOutParallel)
 }
