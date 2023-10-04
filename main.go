@@ -19,19 +19,19 @@ func main() {
 
 	world := hittable.NewWorld(
 		&hittable.Sphere{
-			Center:   vector.Point{0, -100.5, -1},
+			Center:   vector.Point{0, -100.5, -1.0},
 			Material: &materialGround,
 			Radius:   100},
 		&hittable.Sphere{
-			Center:   vector.Point{0, 0, -1},
+			Center:   vector.Point{0, 0, -1.0},
 			Material: &materialCenter,
 			Radius:   0.5},
 		&hittable.Sphere{
-			Center:   vector.Point{-1.0, 0, -1},
+			Center:   vector.Point{-1.0, 0, -1.0},
 			Material: &materialLeft,
 			Radius:   0.5},
 		&hittable.Sphere{
-			Center:   vector.Point{1.0, 0, -1},
+			Center:   vector.Point{1.0, 0, -1.0},
 			Material: &materialRight,
 			Radius:   0.5},
 		// &hittable.Plane{
