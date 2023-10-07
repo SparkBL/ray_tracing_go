@@ -13,8 +13,8 @@ func main() {
 	//World
 	materialGround := hittable.Lambertian{Albedo: vector.Color{0.8, 0.8, 0.0}}
 	materialCenter := hittable.Lambertian{Albedo: vector.Color{0.1, 0.2, 0.5}}
-	// materialLeft := hittable.Metal{Albedo: vector.Color{1, 1, 1}, Fuzziness: 0.2}
-	materialLeft := hittable.Dielectric{1.5}
+	materialLeft := hittable.Metal{Albedo: vector.Color{1, 1, 1}, Fuzziness: 0.2}
+	//materialLeft := hittable.Dielectric{1.5}
 	materialRight := hittable.Metal{Albedo: vector.Color{0.8, 0.6, 0.2}, Fuzziness: 0.0}
 
 	world := hittable.NewWorld(

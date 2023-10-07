@@ -82,8 +82,46 @@ public:
     {
         vec3 reflected = reflect(unit_vector(r_in.direction), rec.normal);
         ray scattered = ray(rec.p, reflected + random_unit_vector() * fuzziness);
-        return scatter_record(true, ray(rec.p, scattered), albedo);
+        return scatter_record(true, scattered, albedo);
     }
 };
 
+class dielectric : public material
+{
+private:
+    double refraction_index;
+
+    double reflectance(double cosine, double ref_idx) const
+    {
+        double r0 = (1 - ref_idx) / (1 + ref_idx);
+        r0 = r0 * r0;
+        return r0 + (1 - r0) * pow(1 - cosine, 5);
+    }
+
+public:
+    scatter_record scatter(const ray r_in, const hit_record &rec) const override
+    {
+        color attenuation = color(1, 1, 1);
+        double refraction_ratio = refraction_index;
+        if (rec.is_front_face)
+        {
+            refraction_ratio = 1.0 / refraction_index;
+        }
+        vec3 unit_direction = unit_vector(r_in.direction);
+        double cos_theta = fmin(-unit_direction && rec.normal, 1.0);
+        double sin_theta = sqrt(1.0 - cos_theta * cos_theta);
+        vec3 direction;
+        bool cannot_refract = refraction_ratio * sin_theta > 1.0;
+        if (cannot_refract || reflectance(cos_theta, refraction_ratio) > dis(gen))
+        {
+            direction = reflect(unit_direction, rec.normal);
+        }
+        else
+        {
+            direction = refract(unit_direction, rec.normal, refraction_ratio);
+        }
+        ray scattered = ray(rec.p, direction);
+        return scatter_record(true, scattered, attenuation);
+    }
+};
 #endif

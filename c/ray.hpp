@@ -13,9 +13,9 @@ struct ray
         this->direction = direction;
     }
 
-    point operator()(double t)
+    point at(double t) const
     {
-        origin + direction *t;
+        return origin + direction * t;
     }
 
     // private:
