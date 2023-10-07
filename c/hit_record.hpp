@@ -4,9 +4,9 @@
 #include "ray.hpp"
 #include <memory>
 
-using std::shared_ptr
+using std::shared_ptr;
 
-    class material;
+class material;
 
 struct hit_record
 {
@@ -38,7 +38,8 @@ struct scatter_record
     color attenuation;
     ray scattered;
     bool is_scattered;
-    scatter_record(bool is_scattered, ray scattered, color attenuation)
+
+    scatter_record(bool is_scattered, const ray &scattered, const color &attenuation)
     {
         this->attenuation = attenuation;
         this->scattered = scattered;
@@ -67,6 +68,21 @@ public:
             scatter_direction = rec.normal;
         }
         return scatter_record(true, ray(rec.p, scatter_direction), albedo);
+    }
+};
+
+class metal : public material
+{
+private:
+    color albedo;
+    double fuzziness;
+
+public:
+    scatter_record scatter(const ray r_in, const hit_record &rec) const override
+    {
+        vec3 reflected = reflect(unit_vector(r_in.direction), rec.normal);
+        ray scattered = ray(rec.p, reflected + random_unit_vector() * fuzziness);
+        return scatter_record(true, ray(rec.p, scattered), albedo);
     }
 };
 

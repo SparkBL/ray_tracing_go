@@ -5,6 +5,8 @@
 
 struct ray
 {
+    ray() {}
+
     ray(const point &origin, const vec3 &direction)
     {
         this->origin = origin;
