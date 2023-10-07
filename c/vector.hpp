@@ -118,7 +118,7 @@ struct vec3
 
     bool is_close_to_zero() const
     {
-        return e[0] < 1e-8 && e[1] < 1e-8 && e[2] < 1e-8;
+        return fabs(e[0]) < 1e-8 && fabs(e[1]) < 1e-8 && fabs(e[2]) < 1e-8;
     }
 
     string string() const

@@ -16,7 +16,7 @@ struct ray
         origin + direction *t;
     }
 
-private:
+    // private:
     point origin;
     vec3 direction;
 };
