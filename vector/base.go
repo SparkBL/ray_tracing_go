@@ -39,7 +39,7 @@ func (v *Vector) LengthSquared() float64 {
 	return v[0]*v[0] + v[1]*v[1] + v[2]*v[2]
 }
 
-func (v *Vector) Length() float64 {
+func (v Vector) Length() float64 {
 	return math.Sqrt(v.LengthSquared())
 }
 

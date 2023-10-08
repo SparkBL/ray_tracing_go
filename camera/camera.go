@@ -36,45 +36,112 @@ type Camera struct {
 	focalLength    float64
 	viewportHeight float64
 	viewportWidth  float64
-	logger         *bufio.Writer
+
+	verticalFieldOfView float64
+	lookFrom            vector.Point
+	lookAt              vector.Point
+	vUp                 vector.Vector
+	u, v, w             vector.Vector
+
+	logger *bufio.Writer
 }
 
-type CameraOption func(c *Camera)
+type CameraOption func(c *Camera) *Camera
 
-func (c *Camera) Init(opts ...CameraOption) {
+func DefaultOption(c *Camera) *Camera {
 	c.aspectRatio = 16.0 / 9.0
-	c.imageWidth = 800
-	c.imageHeight = int(float64(c.imageWidth) / c.aspectRatio)
+	c.imageWidth = 1000
 
-	c.focalLength = 1.0
-	c.viewportHeight = 2.0 //think as matrix
-	c.viewportWidth = c.viewportHeight * (float64(c.imageWidth) / float64(c.imageHeight))
+	c.lookFrom = vector.Vector{0, 0, 0}
+	c.lookAt = vector.Vector{0, 0, -1}
+	c.vUp = vector.Vector{0, 1, 0}
 
-	c.center = vector.Point{0, 0, 0}
+	c.verticalFieldOfView = 90 //degrees
 
 	c.samplesPerPixel = 10
 	c.maxRayDepth = 50
+	return c
+}
 
+func WithPosition(vUp, lookFrom, lookAt vector.Vector) CameraOption {
+	return func(c *Camera) *Camera {
+		c.lookFrom = lookFrom
+		c.lookAt = lookAt
+		c.vUp = vUp
+		return c
+	}
+}
+
+func WithAspectRatio(aspectRatio float64) CameraOption {
+	return func(c *Camera) *Camera {
+		c.aspectRatio = aspectRatio
+		return c
+	}
+}
+
+func WithImageWidth(imageWidth int) CameraOption {
+	return func(c *Camera) *Camera {
+		c.imageWidth = imageWidth
+		return c
+	}
+}
+
+func WithSamplesPerPixel(samplesPerPixel int) CameraOption {
+	return func(c *Camera) *Camera {
+		c.samplesPerPixel = samplesPerPixel
+		return c
+	}
+}
+
+func WithMaxRayDepth(maxRayDepth int) CameraOption {
+	return func(c *Camera) *Camera {
+		c.maxRayDepth = maxRayDepth
+		return c
+	}
+}
+
+func WithVFOV(vFov float64) CameraOption {
+	return func(c *Camera) *Camera {
+		c.verticalFieldOfView = vFov
+		return c
+	}
+}
+
+func (c *Camera) Init(opts ...CameraOption) {
+	c = DefaultOption(c)
 	for _, o := range opts {
-		o(c)
+		c = o(c)
 	}
 
+	c.imageHeight = int(float64(c.imageWidth) / c.aspectRatio)
 	if c.imageHeight < 1 {
 		c.imageHeight = 1
 	}
-	viewportU := vector.Vector{c.viewportWidth, 0, 0}
-	viewportV := vector.Vector{0, -c.viewportHeight, 0}
+	c.center = c.lookFrom
+	c.focalLength = c.lookFrom.Add(c.lookAt.Negative()).Length()
+	theta := util.DegressToRadians(c.verticalFieldOfView)
+	h := math.Tan(theta / 2)
+	c.viewportHeight = 2.0 * h * c.focalLength //think as matrix
+	c.viewportWidth = c.viewportHeight * (float64(c.imageWidth) / float64(c.imageHeight))
 
+	// Calculate the u,v,w unit basis vectors for the camera coordinate frame.
+	c.w = vector.UnitVector(c.lookFrom.Add(c.lookAt.Negative()))
+	c.u = vector.UnitVector(vector.Cross(c.vUp, c.w))
+	c.v = vector.Cross(c.w, c.u)
+
+	viewportU := c.u.Multiply(c.viewportWidth)
+	viewportV := c.v.Negative().Multiply(c.viewportHeight)
 	c.pixelDeltaU = viewportU.Divide(float64(c.imageWidth))
 	c.pixelDeltaV = viewportV.Divide(float64(c.imageHeight))
 
 	viewPortUpleft :=
-		c.center.Add(vector.Vector{0, 0, c.focalLength}.Negative()).
+		c.center.Add(c.w.Multiply(c.focalLength).Negative()).
 			Add(viewportU.Divide(2).Negative()).
 			Add(viewportV.Divide(2).Negative())
-
 	c.pixelZeroLocation = viewPortUpleft.Add(c.pixelDeltaU.Add(c.pixelDeltaV).Multiply(0.5))
 	c.logger = bufio.NewWriter(os.Stdout)
+
+	fmt.Printf("%#v\n", c)
 }
 
 func (c *Camera) Render(filename string, world hittable.Hittable) {
