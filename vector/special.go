@@ -39,6 +39,16 @@ func RandomInUnitSphere() Vector {
 	}
 }
 
+func RandomInUnitDisk() Vector {
+	for {
+		v := RandomBounded(-1, 1)
+		v[2] = 0
+		if v.LengthSquared() < 1 {
+			return v
+		}
+	}
+}
+
 func RandomUnitVector() Vector {
 	return UnitVector(RandomInUnitSphere())
 }

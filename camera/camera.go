@@ -33,7 +33,7 @@ type Camera struct {
 	samplesPerPixel int
 	maxRayDepth     int
 
-	focalLength    float64
+	//	focalLength    float64
 	viewportHeight float64
 	viewportWidth  float64
 
@@ -42,6 +42,11 @@ type Camera struct {
 	lookAt              vector.Point
 	vUp                 vector.Vector
 	u, v, w             vector.Vector
+
+	defocusAngle  float64       // Variation angle of rays through each pixel
+	focusDistance float64       // Distance from camera lookfrom point to plane of perfect focus
+	defocusDiskU  vector.Vector // Defocus disk horizontal radius
+	defocusDiskV  vector.Vector // Defocus disk vertical radius
 
 	logger *bufio.Writer
 }
@@ -60,6 +65,9 @@ func DefaultOption(c *Camera) *Camera {
 
 	c.samplesPerPixel = 10
 	c.maxRayDepth = 50
+
+	c.defocusAngle = 0
+	c.focusDistance = 10
 	return c
 }
 
@@ -107,6 +115,14 @@ func WithVFOV(vFov float64) CameraOption {
 	}
 }
 
+func WithFocus(defocusAngle, focusDistance float64) CameraOption {
+	return func(c *Camera) *Camera {
+		c.defocusAngle = defocusAngle
+		c.focusDistance = focusDistance
+		return c
+	}
+}
+
 func (c *Camera) Init(opts ...CameraOption) {
 	c = DefaultOption(c)
 	for _, o := range opts {
@@ -117,11 +133,13 @@ func (c *Camera) Init(opts ...CameraOption) {
 	if c.imageHeight < 1 {
 		c.imageHeight = 1
 	}
+
+	// Determine viewport dimensions.
 	c.center = c.lookFrom
-	c.focalLength = c.lookFrom.Add(c.lookAt.Negative()).Length()
+	//We assume focal_length == focus_distance
 	theta := util.DegressToRadians(c.verticalFieldOfView)
 	h := math.Tan(theta / 2)
-	c.viewportHeight = 2.0 * h * c.focalLength //think as matrix
+	c.viewportHeight = 2.0 * h * c.focusDistance //think as matrix
 	c.viewportWidth = c.viewportHeight * (float64(c.imageWidth) / float64(c.imageHeight))
 
 	// Calculate the u,v,w unit basis vectors for the camera coordinate frame.
@@ -129,16 +147,24 @@ func (c *Camera) Init(opts ...CameraOption) {
 	c.u = vector.UnitVector(vector.Cross(c.vUp, c.w))
 	c.v = vector.Cross(c.w, c.u)
 
+	// Calculate the horizontal and vertical delta vectors to the next pixel.
 	viewportU := c.u.Multiply(c.viewportWidth)
 	viewportV := c.v.Negative().Multiply(c.viewportHeight)
 	c.pixelDeltaU = viewportU.Divide(float64(c.imageWidth))
 	c.pixelDeltaV = viewportV.Divide(float64(c.imageHeight))
 
+	// Calculate the location of the upper left pixel.
 	viewPortUpleft :=
-		c.center.Add(c.w.Multiply(c.focalLength).Negative()).
+		c.center.Add(c.w.Multiply(c.focusDistance).Negative()).
 			Add(viewportU.Divide(2).Negative()).
 			Add(viewportV.Divide(2).Negative())
 	c.pixelZeroLocation = viewPortUpleft.Add(c.pixelDeltaU.Add(c.pixelDeltaV).Multiply(0.5))
+
+	// Calculate the camera defocus disk basis vectors.
+	defocusRadius := c.focusDistance * math.Tan(util.DegressToRadians(c.defocusAngle/2))
+	c.defocusDiskU = c.u.Multiply(defocusRadius)
+	c.defocusDiskV = c.v.Multiply(defocusRadius)
+
 	c.logger = bufio.NewWriter(os.Stdout)
 
 	fmt.Printf("%#v\n", c)
@@ -216,13 +242,15 @@ func (c *Camera) rayColor(r ray.Ray, depth int, world hittable.Hittable) vector.
 }
 
 func (c *Camera) getRay(i, j int) ray.Ray {
+	// Get a randomly-sampled camera ray for the pixel at location i,j, originating from
+	// the camera defocus disk.
 	pixelCenter := c.pixelZeroLocation.
 		Add(c.pixelDeltaU.Multiply(float64(i))).
 		Add(c.pixelDeltaV.Multiply(float64(j)))
 
 	pixelSample := pixelCenter.Add(c.pixelSampleSquare())
 	return ray.Ray{
-		Origin:    c.center,
+		Origin:    c.defocusDiskSample(),
 		Direction: pixelSample.Add(c.center.Negative()),
 	}
 }
@@ -230,6 +258,14 @@ func (c *Camera) getRay(i, j int) ray.Ray {
 func (c *Camera) pixelSampleSquare() vector.Vector {
 	px, py := -0.5+randGenerator.Float64(), -0.5+randGenerator.Float64()
 	return c.pixelDeltaU.Multiply(px).Add(c.pixelDeltaV.Multiply(py))
+}
+
+func (c *Camera) defocusDiskSample() vector.Point {
+	p := vector.RandomInUnitDisk()
+	if c.defocusAngle <= 0 {
+		return c.center
+	}
+	return c.center.Add(c.defocusDiskU.Multiply(p[0])).Add(c.defocusDiskV.Multiply(p[1]))
 }
 
 func ColorString(c *vector.Color, samples int) string {

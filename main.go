@@ -2,6 +2,7 @@ package main
 
 import (
 	"math"
+	"math/rand"
 	"ray_tracing/camera"
 	"ray_tracing/hittable"
 	"ray_tracing/vector"
@@ -44,12 +45,13 @@ func Scene1() {
 
 	c := camera.Camera{}
 	c.Init(
-		camera.WithVFOV(90),
+		camera.WithVFOV(20),
 		camera.WithPosition(vector.Vector{0, 1, 0},
 			vector.Vector{-2, 2, 1},
 			vector.Vector{0, 0, -1},
 		),
-		camera.WithImageWidth(800),
+		//camera.WithFocus(10.0, 3.4),
+		camera.WithImageWidth(600),
 	)
 	c.Render("test_ray.ppm", world)
 }
@@ -76,8 +78,77 @@ func Scene2() {
 	camera.Render("test_ray.ppm", world)
 }
 
+func Scene3() {
+	// World
+	materialGround := hittable.Lambertian{Albedo: vector.Color{0.5, 0.5, 0.5}}
+
+	world := hittable.NewWorld(
+		&hittable.Sphere{
+			Center:   vector.Point{0, -1000, 0},
+			Material: &materialGround,
+			Radius:   1000},
+	)
+
+	for a := -11; a < 11; a++ {
+		for b := -11; b < 11; b++ {
+			chooseMaterial := rand.Float64()
+			center := vector.Point{float64(a) + 0.9*rand.Float64(), 0.2, float64(b) + 0.9*rand.Float64()}
+			if center.Add(vector.Point{4, 0.2, 0}.Negative()).Length() > 0.9 {
+				var sphereMaterial hittable.Material
+
+				if chooseMaterial < 0.8 {
+					//diffuse
+					albedo := vector.Multiply(vector.Random(), vector.Random())
+					sphereMaterial = &hittable.Lambertian{Albedo: albedo}
+				} else if chooseMaterial < 0.95 {
+					//metal
+					albedo := vector.RandomBounded(0.5, 1)
+					fuzz := rand.Float64() / 2
+					sphereMaterial = &hittable.Metal{Albedo: albedo, Fuzziness: fuzz}
+				} else {
+					// glass
+					sphereMaterial = &hittable.Dielectric{IR: 1.5}
+				}
+				world.Append(&hittable.Sphere{Center: center, Radius: 0.2, Material: sphereMaterial})
+			}
+		}
+	}
+
+	world.Append(
+		&hittable.Sphere{
+			Center:   vector.Point{0, 1, 0},
+			Radius:   1.0,
+			Material: &hittable.Dielectric{IR: 1.5},
+		},
+		&hittable.Sphere{
+			Center:   vector.Point{-4, 1, 0},
+			Radius:   1.0,
+			Material: &hittable.Lambertian{Albedo: vector.Color{0.4, 0.2, 0.1}},
+		},
+		&hittable.Sphere{
+			Center:   vector.Point{4, 1, 0},
+			Radius:   1.0,
+			Material: &hittable.Metal{Albedo: vector.Color{0.7, 0.6, 0.5}, Fuzziness: 0},
+		},
+	)
+
+	c := camera.Camera{}
+	c.Init(
+		camera.WithVFOV(20),
+		camera.WithPosition(vector.Vector{0, 1, 0},
+			vector.Vector{13, 2, 3},
+			vector.Vector{0, 0, 0},
+		),
+		//camera.WithFocus(10.0, 3.4),
+		camera.WithImageWidth(400),
+		camera.WithSamplesPerPixel(10),
+		camera.WithMaxRayDepth(50),
+	)
+	c.Render("test_ray.ppm", world)
+}
+
 func main() {
-	Scene1()
+	Scene3()
 	// debug.SetGCPercent(-1)
 
 }
