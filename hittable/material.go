@@ -70,7 +70,10 @@ func (d *Dielectric) Scatter(rIn ray.Ray, rec *HitRecord) (bool, ray.Ray, vector
 	direction := vector.Vector{}
 
 	cannotRefract := refractionRatio*sinTheta > 1.0
-	if cannotRefract || d.reflectance(cosTheta, refractionRatio) > randGenerator.Float64() {
+	mu.Lock()
+	randFloat := randGenerator.Float64()
+	mu.Unlock()
+	if cannotRefract || d.reflectance(cosTheta, refractionRatio) > randFloat {
 		direction = vector.Reflect(unitDirection, rec.Normal)
 	} else {
 		direction = vector.Refract(unitDirection, rec.Normal, refractionRatio)

@@ -11,7 +11,9 @@ import (
 	"ray_tracing/ray"
 	"ray_tracing/util"
 	"ray_tracing/vector"
+	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/seehuhn/mt19937"
@@ -20,6 +22,12 @@ import (
 )
 
 var randGenerator *rand.Rand = rand.New(mt19937.New())
+var mu sync.Mutex
+
+type pair struct {
+	f int
+	s string
+}
 
 type Camera struct {
 	aspectRatio       float64
@@ -176,42 +184,53 @@ func (c *Camera) Render(filename string, world hittable.Hittable) {
 	if err != nil {
 		log.Println(err)
 	}
-	var output chan string = make(chan string, 3)
+	var output chan pair = make(chan pair, 500)
 	var quit chan bool = make(chan bool)
-	go func(chan string, chan bool) {
-		out, _ := os.Create(filename)
-		var buf strings.Builder = strings.Builder{}
+	//var mux sync.Mutex
+	wg := sync.WaitGroup{}
+	out, _ := os.Create(filename)
+	var buf strings.Builder = strings.Builder{}
+	keys := make([]int, 0, c.imageHeight*c.imageWidth)
+	pixels := make(map[int]string, c.imageHeight*c.imageWidth)
+	go func(chan pair, chan bool) {
 		out.WriteString(fmt.Sprintf("P3\n%d %d\n255\n", c.imageWidth, c.imageHeight))
 		for {
 			select {
 			case s := <-output:
-				buf.WriteString(s)
-				if buf.Len() > 1000 {
-					out.WriteString(buf.String())
-					buf.Reset()
-				}
-
+				keys = append(keys, s.f)
+				pixels[s.f] = s.s
+				wg.Done()
 			case <-quit:
-				out.Close()
+				break
 			}
 		}
 	}(output, quit)
-
+	count := 0
 	for i := 0; i < c.imageHeight; i++ {
-
 		c.logger.WriteString(fmt.Sprintf("\rremaining: %.2f%%", 100.0*float64(c.imageHeight-i)/float64(c.imageHeight)))
 		c.logger.Flush()
-
 		for j := 0; j < c.imageWidth; j++ {
-			pixelColor := vector.Color{0, 0, 0}
-			for sample := 0; sample < c.samplesPerPixel; sample++ {
-				r := c.getRay(j, i)
-				pixelColor = pixelColor.Add(c.rayColor(r, c.maxRayDepth, world)) //performance boost if pointer
-			}
-			output <- ColorString(&pixelColor, c.samplesPerPixel)
+			wg.Add(1)
+			go func(k, w, cnt int) {
+				pixelColor := vector.Color{0, 0, 0}
+				for sample := 0; sample < c.samplesPerPixel; sample++ {
+					r := c.getRay(w, k)
+					pixelColor = pixelColor.Add(c.rayColor(r, c.maxRayDepth, world)) //performance boost if pointer
+				}
+				output <- pair{cnt, ColorString(&pixelColor, c.samplesPerPixel)}
+			}(i, j, count)
+			count++
 		}
 	}
+	wg.Wait()
 	quit <- true
+
+	sort.Ints(keys)
+	for _, k := range keys {
+		buf.WriteString(pixels[k])
+	}
+	out.WriteString(buf.String())
+	buf.Reset()
 
 	c.logger.WriteString(fmt.Sprintf("\relapsed: %v\n", time.Since(start)))
 	c.logger.Flush()
@@ -256,7 +275,9 @@ func (c *Camera) getRay(i, j int) ray.Ray {
 }
 
 func (c *Camera) pixelSampleSquare() vector.Vector {
+	mu.Lock()
 	px, py := -0.5+randGenerator.Float64(), -0.5+randGenerator.Float64()
+	mu.Unlock()
 	return c.pixelDeltaU.Multiply(px).Add(c.pixelDeltaV.Multiply(py))
 }
 

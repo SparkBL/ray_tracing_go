@@ -3,6 +3,7 @@ package vector
 import (
 	"math"
 	"math/rand"
+	"sync"
 
 	"github.com/seehuhn/mt19937"
 )
@@ -13,6 +14,7 @@ func UnitVector(v Vector) Vector {
 }
 
 var r *rand.Rand = rand.New(mt19937.New())
+var mu sync.Mutex
 
 func Random() Vector {
 	return Vector{
@@ -23,6 +25,8 @@ func Random() Vector {
 }
 
 func RandomBounded(min, max float64) Vector {
+	mu.Lock()
+	defer mu.Unlock()
 	return Vector{
 		min + r.Float64()*(max-min),
 		min + r.Float64()*(max-min),

@@ -51,7 +51,7 @@ func Scene1() {
 			vector.Vector{0, 0, -1},
 		),
 		//camera.WithFocus(10.0, 3.4),
-		camera.WithImageWidth(600),
+		camera.WithImageWidth(1200),
 	)
 	c.Render("test_ray.ppm", world)
 }
@@ -73,9 +73,9 @@ func Scene2() {
 			Radius:   r},
 	)
 
-	camera := camera.Camera{}
-	camera.Init()
-	camera.Render("test_ray.ppm", world)
+	c := camera.Camera{}
+	c.Init(camera.WithImageWidth(50))
+	c.Render("test_ray.ppm", world)
 }
 
 func Scene3() {
@@ -140,9 +140,9 @@ func Scene3() {
 			vector.Vector{0, 0, 0},
 		),
 		//camera.WithFocus(10.0, 3.4),
-		camera.WithImageWidth(400),
-		camera.WithSamplesPerPixel(10),
-		camera.WithMaxRayDepth(50),
+		camera.WithImageWidth(1200),
+		camera.WithSamplesPerPixel(100),
+		camera.WithMaxRayDepth(100),
 	)
 	c.Render("test_ray.ppm", world)
 }
