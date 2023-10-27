@@ -185,6 +185,7 @@ func (c *Camera) Render(filename string, world hittable.Hittable) {
 		log.Println(err)
 	}
 	var output chan pair = make(chan pair, 500)
+	var counter chan bool = make(chan bool, 3)
 	var quit chan bool = make(chan bool)
 	//var mux sync.Mutex
 	wg := sync.WaitGroup{}
@@ -192,23 +193,37 @@ func (c *Camera) Render(filename string, world hittable.Hittable) {
 	var buf strings.Builder = strings.Builder{}
 	keys := make([]int, 0, c.imageHeight*c.imageWidth)
 	pixels := make(map[int]string, c.imageHeight*c.imageWidth)
-	go func(chan pair, chan bool) {
+
+	go func(cc chan bool) {
+		cnt := 0
+		for {
+			select {
+			case <-cc:
+				cnt++
+				if cnt%100 == 0 {
+					c.logger.WriteString(fmt.Sprintf("\rremaining: %.2f%%", 100.0*float64(cnt)/float64(c.imageHeight*c.imageHeight)))
+					c.logger.Flush()
+				}
+			}
+		}
+	}(counter)
+
+	go func(o chan pair, q chan bool, ct chan bool) {
 		out.WriteString(fmt.Sprintf("P3\n%d %d\n255\n", c.imageWidth, c.imageHeight))
 		for {
 			select {
-			case s := <-output:
+			case s := <-o:
 				keys = append(keys, s.f)
 				pixels[s.f] = s.s
 				wg.Done()
-			case <-quit:
+				ct <- true
+			case <-q:
 				break
 			}
 		}
-	}(output, quit)
+	}(output, quit, counter)
 	count := 0
 	for i := 0; i < c.imageHeight; i++ {
-		c.logger.WriteString(fmt.Sprintf("\rremaining: %.2f%%", 100.0*float64(c.imageHeight-i)/float64(c.imageHeight)))
-		c.logger.Flush()
 		for j := 0; j < c.imageWidth; j++ {
 			wg.Add(1)
 			go func(k, w, cnt int) {
