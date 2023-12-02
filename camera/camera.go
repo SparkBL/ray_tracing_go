@@ -10,7 +10,6 @@ import (
 	"ray_tracing/ray"
 	"ray_tracing/util"
 	"ray_tracing/vector"
-	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -23,11 +22,6 @@ import (
 )
 
 var randGen *rand.Rand = rand.New(prng.NewSplitMix64(uint64(time.Now().UnixNano())))
-
-type pair struct {
-	f int
-	s string
-}
 
 type Camera struct {
 	aspectRatio       float64
@@ -192,13 +186,12 @@ func (c *Camera) Render(filename string, world hittable.Hittable) {
 		log.Fatal(err)
 	}
 
-	var output chan pair = make(chan pair, 500)
 	var counter chan bool = make(chan bool, 3)
 	wg := sync.WaitGroup{}
 
 	var buf strings.Builder = strings.Builder{}
-	keys := make([]int, 0, c.imageHeight*c.imageWidth)
-	pixels := make(map[int]string, c.imageHeight*c.imageWidth)
+
+	pixelHead := &PixelNode{"", nil}
 
 	go func(cc chan bool) {
 		cnt := 0
@@ -211,40 +204,37 @@ func (c *Camera) Render(filename string, world hittable.Hittable) {
 		}
 	}(counter)
 
-	go func(out chan pair, ct chan bool) {
-		for s := range out {
-			keys = append(keys, s.f)
-			pixels[s.f] = s.s
-			wg.Done()
-			ct <- true
-
-		}
-	}(output, counter)
-	count := 0
 	wg.Add(1)
+
+	cur := pixelHead
 	for i := 0; i < c.imageHeight; i++ {
 		for j := 0; j < c.imageWidth; j++ {
-			go func(k, w, cnt int) {
+			go func(k, w int, pn *PixelNode) {
 				wg.Add(1)
 				pixelColor := vector.Color{0, 0, 0}
 				for sample := 0; sample < c.samplesPerPixel; sample++ {
 					r := c.getRay(w, k)
 					pixelColor = pixelColor.Add(c.rayColor(r, c.maxRayDepth, world)) //performance boost if pointer
 				}
-				output <- pair{cnt, ColorString(&pixelColor, c.samplesPerPixel)}
-			}(i, j, count)
-			count++
+				pn.string = ColorString(&pixelColor, c.samplesPerPixel)
+				counter <- true
+				wg.Done()
+			}(i, j, cur)
+
+			cur.next = &PixelNode{"", nil}
+			cur = cur.next
 		}
 	}
 	wg.Done()
 	wg.Wait()
-	close(output)
 	close(counter)
-	sort.Ints(keys)
 
-	for _, k := range keys {
-		buf.WriteString(pixels[k])
+	link := pixelHead
+	for link != nil {
+		buf.WriteString(link.string)
+		link = link.next
 	}
+
 	outFile.WriteString(fmt.Sprintf("P3\n%d %d\n255\n", c.imageWidth, c.imageHeight))
 	outFile.WriteString(buf.String())
 	buf.Reset()
