@@ -125,6 +125,20 @@ func WithFocus(defocusAngle, focusDistance float64) CameraOption {
 	}
 }
 
+func (c *Camera) Info() string {
+	buf := strings.Builder{}
+	buf.WriteString("render settings:\n")
+	buf.WriteString(fmt.Sprintf("- aspect ratio: %.2f\n", c.aspectRatio))
+	buf.WriteString(fmt.Sprintf("- image size: %d x %d\n", c.imageWidth, c.imageHeight))
+	buf.WriteString(fmt.Sprintf("- samples per pixel: %d\n", c.samplesPerPixel))
+	buf.WriteString(fmt.Sprintf("- ray depth: %d\n", c.maxRayDepth))
+	buf.WriteString(fmt.Sprintf("- vertical FOV: %.2f\n", c.verticalFieldOfView))
+	buf.WriteString(fmt.Sprintf("- defocus angle: %.2f\n", c.defocusAngle))
+	buf.WriteString(fmt.Sprintf("- focus distance: %.2f\n", c.focusDistance))
+
+	return buf.String()
+}
+
 func (c *Camera) Init(opts ...CameraOption) {
 	c = DefaultOption(c)
 	for _, o := range opts {
@@ -169,7 +183,7 @@ func (c *Camera) Init(opts ...CameraOption) {
 
 	c.logger = bufio.NewWriter(os.Stdout)
 
-	fmt.Printf("%#v\n", c)
+	fmt.Printf(c.Info())
 }
 
 func (c *Camera) Render(filename string, world hittable.Hittable) {
