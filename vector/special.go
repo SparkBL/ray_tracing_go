@@ -2,10 +2,11 @@ package vector
 
 import (
 	"math"
-	"math/rand"
-	"sync"
+	"time"
 
-	"github.com/seehuhn/mt19937"
+	"golang.org/x/exp/rand"
+
+	"gonum.org/v1/gonum/mathext/prng"
 )
 
 func UnitVector(v Vector) Vector {
@@ -13,8 +14,7 @@ func UnitVector(v Vector) Vector {
 
 }
 
-var r *rand.Rand = rand.New(mt19937.New())
-var mu sync.Mutex
+var r *rand.Rand = rand.New(prng.NewSplitMix64(uint64(time.Now().UnixNano())))
 
 func Random() Vector {
 	return Vector{
@@ -25,8 +25,6 @@ func Random() Vector {
 }
 
 func RandomBounded(min, max float64) Vector {
-	mu.Lock()
-	defer mu.Unlock()
 	return Vector{
 		min + r.Float64()*(max-min),
 		min + r.Float64()*(max-min),

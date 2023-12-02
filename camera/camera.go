@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"math"
-	"math/rand"
 	"os"
 	"ray_tracing/interval"
 	"ray_tracing/ray"
@@ -16,13 +15,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/seehuhn/mt19937"
+	"golang.org/x/exp/rand"
+
+	prng "gonum.org/v1/gonum/mathext/prng"
 
 	"ray_tracing/hittable"
 )
 
-var randGenerator *rand.Rand = rand.New(mt19937.New())
-var mu sync.Mutex
+var randGen *rand.Rand = rand.New(prng.NewSplitMix64(uint64(time.Now().UnixNano())))
 
 type pair struct {
 	f int
@@ -180,53 +180,52 @@ func (c *Camera) Init(opts ...CameraOption) {
 
 func (c *Camera) Render(filename string, world hittable.Hittable) {
 	start := time.Now()
+
+	//remove old file
 	err := os.Remove(filename)
 	if err != nil {
-		log.Println(err)
+		log.Fatal(err)
 	}
+	//create output file
+	outFile, err := os.Create(filename)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	var output chan pair = make(chan pair, 500)
 	var counter chan bool = make(chan bool, 3)
-	var quit chan bool = make(chan bool)
-	//var mux sync.Mutex
 	wg := sync.WaitGroup{}
-	out, _ := os.Create(filename)
+
 	var buf strings.Builder = strings.Builder{}
 	keys := make([]int, 0, c.imageHeight*c.imageWidth)
 	pixels := make(map[int]string, c.imageHeight*c.imageWidth)
 
 	go func(cc chan bool) {
 		cnt := 0
-		for {
-			select {
-			case <-cc:
-				cnt++
-				if cnt%100 == 0 {
-					c.logger.WriteString(fmt.Sprintf("\rremaining: %.2f%%", 100.0*float64(cnt)/float64(c.imageHeight*c.imageHeight)))
-					c.logger.Flush()
-				}
+		for range cc {
+			cnt++
+			if cnt%100 == 0 {
+				c.logger.WriteString(fmt.Sprintf("\rremaining: %.2f%%", 100.0*float64(cnt)/float64(c.imageHeight*c.imageWidth)))
+				c.logger.Flush()
 			}
 		}
 	}(counter)
 
-	go func(o chan pair, q chan bool, ct chan bool) {
-		out.WriteString(fmt.Sprintf("P3\n%d %d\n255\n", c.imageWidth, c.imageHeight))
-		for {
-			select {
-			case s := <-o:
-				keys = append(keys, s.f)
-				pixels[s.f] = s.s
-				wg.Done()
-				ct <- true
-			case <-q:
-				break
-			}
+	go func(out chan pair, ct chan bool) {
+		for s := range out {
+			keys = append(keys, s.f)
+			pixels[s.f] = s.s
+			wg.Done()
+			ct <- true
+
 		}
-	}(output, quit, counter)
+	}(output, counter)
 	count := 0
+	wg.Add(1)
 	for i := 0; i < c.imageHeight; i++ {
 		for j := 0; j < c.imageWidth; j++ {
-			wg.Add(1)
 			go func(k, w, cnt int) {
+				wg.Add(1)
 				pixelColor := vector.Color{0, 0, 0}
 				for sample := 0; sample < c.samplesPerPixel; sample++ {
 					r := c.getRay(w, k)
@@ -237,14 +236,17 @@ func (c *Camera) Render(filename string, world hittable.Hittable) {
 			count++
 		}
 	}
+	wg.Done()
 	wg.Wait()
-	quit <- true
-
+	close(output)
+	close(counter)
 	sort.Ints(keys)
+
 	for _, k := range keys {
 		buf.WriteString(pixels[k])
 	}
-	out.WriteString(buf.String())
+	outFile.WriteString(fmt.Sprintf("P3\n%d %d\n255\n", c.imageWidth, c.imageHeight))
+	outFile.WriteString(buf.String())
 	buf.Reset()
 
 	c.logger.WriteString(fmt.Sprintf("\relapsed: %v\n", time.Since(start)))
@@ -263,9 +265,6 @@ func (c *Camera) rayColor(r ray.Ray, depth int, world hittable.Hittable) vector.
 			return vector.Multiply(attenuation, c.rayColor(scattered, depth-1, world))
 		}
 		return vector.Color{0, 0, 0}
-		//	direction := vector.RandomOnHemisphere(rec.Normal) //Random
-		//direction := rec.Normal.Add(vector.RandomUnitVector()) //Lambertian
-		//return c.rayColor(ray.Ray{Origin: rec.Point, Direction: direction}, depth-1, world).Multiply(0.5)
 
 	}
 	unitDirection := vector.UnitVector(r.Direction)
@@ -290,9 +289,9 @@ func (c *Camera) getRay(i, j int) ray.Ray {
 }
 
 func (c *Camera) pixelSampleSquare() vector.Vector {
-	mu.Lock()
-	px, py := -0.5+randGenerator.Float64(), -0.5+randGenerator.Float64()
-	mu.Unlock()
+	//mu.Lock()
+	px, py := -0.5+randGen.Float64(), -0.5+randGen.Float64()
+	//mu.Unlock()
 	return c.pixelDeltaU.Multiply(px).Add(c.pixelDeltaV.Multiply(py))
 }
 

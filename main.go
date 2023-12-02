@@ -6,6 +6,7 @@ import (
 	"ray_tracing/camera"
 	"ray_tracing/hittable"
 	"ray_tracing/vector"
+	"runtime"
 )
 
 func Scene1() {
@@ -51,7 +52,7 @@ func Scene1() {
 			vector.Vector{0, 0, -1},
 		),
 		//camera.WithFocus(10.0, 3.4),
-		camera.WithImageWidth(1200),
+		camera.WithImageWidth(400),
 	)
 	c.Render("test_ray.ppm", world)
 }
@@ -140,7 +141,7 @@ func Scene3() {
 			vector.Vector{0, 0, 0},
 		),
 		//camera.WithFocus(10.0, 3.4),
-		camera.WithImageWidth(1200),
+		camera.WithImageWidth(400),
 		camera.WithSamplesPerPixel(100),
 		camera.WithMaxRayDepth(100),
 	)
@@ -148,7 +149,9 @@ func Scene3() {
 }
 
 func main() {
-	Scene3()
+	numThreads := runtime.NumCPU()
+	runtime.GOMAXPROCS(numThreads)
+	Scene1()
 	// debug.SetGCPercent(-1)
 
 }

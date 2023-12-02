@@ -2,24 +2,30 @@ package interval
 
 import "math"
 
-type Interval struct {
-	Min, Max float64
+type Interval [2]float64
+
+func (i *Interval) Min() float64 {
+	return i[0]
+}
+
+func (i *Interval) Max() float64 {
+	return i[1]
 }
 
 func (i *Interval) Contains(x float64) bool {
-	return i.Min <= x && x <= i.Max
+	return i[0] <= x && x <= i[1]
 }
 
 func (i *Interval) Surrounds(x float64) bool {
-	return i.Min < x && x < i.Max
+	return i[0] < x && x < i[1]
 }
 
 func (i *Interval) Clamp(x float64) float64 {
-	if x < i.Min {
-		return i.Min
+	if x < i[0] {
+		return i[0]
 	}
-	if x > i.Max {
-		return i.Max
+	if x > i[1] {
+		return i[1]
 	}
 	return x
 }

@@ -1,11 +1,11 @@
 package hittable
 
 import (
-	"math/rand"
-	"sync"
+	"time"
 
-	"github.com/seehuhn/mt19937"
+	"golang.org/x/exp/rand"
+
+	prng "gonum.org/v1/gonum/mathext/prng"
 )
 
-var randGenerator *rand.Rand = rand.New(mt19937.New())
-var mu sync.Mutex
+var randGen *rand.Rand = rand.New(prng.NewSplitMix64(uint64(time.Now().UnixNano())))

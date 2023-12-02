@@ -105,9 +105,9 @@ func NewWorld(o ...Hittable) *Hittables {
 
 func (hl *Hittables) Hit(r ray.Ray, rayT interval.Interval, rec *HitRecord) bool {
 	hitAnything := false
-	closestSoFar := rayT.Max
+	closestSoFar := rayT.Max()
 	for _, h := range hl.objects {
-		if h.Hit(r, interval.Interval{rayT.Min, closestSoFar}, rec) {
+		if h.Hit(r, interval.Interval{rayT.Min(), closestSoFar}, rec) {
 			hitAnything = true
 			closestSoFar = rec.T
 		}
