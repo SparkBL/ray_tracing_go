@@ -186,7 +186,28 @@ func (c *Camera) Init(opts ...CameraOption) {
 	fmt.Printf(c.Info())
 }
 
-func (c *Camera) Render(filename string, world hittable.Hittable) {
+type renderUnit struct {
+	k, w int
+	pn   *PixelNode
+}
+
+func (c *Camera) startRenderWorker(wg *sync.WaitGroup, input <-chan renderUnit, counter chan<- bool, world hittable.Hittable) {
+	wg.Add(1)
+	go func() {
+		for r := range input {
+			pixelColor := vector.Color{0, 0, 0}
+			for sample := 0; sample < c.samplesPerPixel; sample++ {
+				r := c.getRay(r.w, r.k)
+				pixelColor = pixelColor.Add(c.rayColor(r, c.maxRayDepth, world)) //performance boost if pointer
+			}
+			r.pn.string = ColorString(&pixelColor, c.samplesPerPixel)
+			counter <- true
+		}
+		wg.Done()
+	}()
+}
+
+func (c *Camera) Render(filename string, world hittable.Hittable, numWorkers uint) {
 	start := time.Now()
 
 	//remove old file
@@ -201,11 +222,14 @@ func (c *Camera) Render(filename string, world hittable.Hittable) {
 	}
 
 	var counter chan bool = make(chan bool, 3)
+	var renderInput chan renderUnit = make(chan renderUnit, 500)
 	wg := sync.WaitGroup{}
-
 	var buf strings.Builder = strings.Builder{}
-
 	pixelHead := &PixelNode{"", nil}
+
+	for range make([]int, numWorkers) {
+		c.startRenderWorker(&wg, renderInput, counter, world)
+	}
 
 	go func(cc chan bool) {
 		cnt := 0
@@ -218,28 +242,16 @@ func (c *Camera) Render(filename string, world hittable.Hittable) {
 		}
 	}(counter)
 
-	wg.Add(1)
-
 	cur := pixelHead
 	for i := 0; i < c.imageHeight; i++ {
 		for j := 0; j < c.imageWidth; j++ {
-			go func(k, w int, pn *PixelNode) {
-				wg.Add(1)
-				pixelColor := vector.Color{0, 0, 0}
-				for sample := 0; sample < c.samplesPerPixel; sample++ {
-					r := c.getRay(w, k)
-					pixelColor = pixelColor.Add(c.rayColor(r, c.maxRayDepth, world)) //performance boost if pointer
-				}
-				pn.string = ColorString(&pixelColor, c.samplesPerPixel)
-				counter <- true
-				wg.Done()
-			}(i, j, cur)
-
+			renderInput <- renderUnit{i, j, cur}
 			cur.next = &PixelNode{"", nil}
 			cur = cur.next
 		}
 	}
-	wg.Done()
+
+	close(renderInput)
 	wg.Wait()
 	close(counter)
 

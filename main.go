@@ -53,7 +53,7 @@ func Scene1() {
 		//camera.WithFocus(10.0, 3.4),
 		camera.WithImageWidth(1000),
 	)
-	c.Render("test_ray.ppm", world)
+	c.Render("test_ray.ppm", world, 16)
 }
 
 func Scene2() {
@@ -75,7 +75,7 @@ func Scene2() {
 
 	c := camera.Camera{}
 	c.Init(camera.WithImageWidth(50))
-	c.Render("test_ray.ppm", world)
+	c.Render("test_ray.ppm", world, 16)
 }
 
 func Scene3() {
@@ -144,7 +144,7 @@ func Scene3() {
 		camera.WithSamplesPerPixel(100),
 		camera.WithMaxRayDepth(100),
 	)
-	c.Render("test_ray.ppm", world)
+	c.Render("test_ray.ppm", world, 16)
 }
 
 func main() {
