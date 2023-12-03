@@ -15,7 +15,7 @@ type HitRecord struct {
 	IsFrontFace bool
 }
 
-func (hr *HitRecord) SetFaceNormal(r ray.Ray, outwardNormal vector.Vector) {
+func (hr *HitRecord) SetFaceNormal(r *ray.Ray, outwardNormal vector.Vector) {
 	// Sets the hit record normal vector.
 	// NOTE: the parameter `outward_normal` is assumed to have unit length.
 
@@ -29,7 +29,8 @@ func (hr *HitRecord) SetFaceNormal(r ray.Ray, outwardNormal vector.Vector) {
 }
 
 type Hittable interface {
-	Hit(r ray.Ray, rayT interval.Interval, rec *HitRecord) bool
+	Hit(r *ray.Ray, rayT interval.Interval, rec *HitRecord) bool
+	BoundingBox() interval.AABB
 }
 
 type Sphere struct {
@@ -38,11 +39,39 @@ type Sphere struct {
 	Material        Material
 	move            bool
 	targetDirection vector.Vector
+	bbox            interval.AABB
+}
+
+func NewSphere(center vector.Point, radius float64, material Material) *Sphere {
+	rvec := vector.Vector{radius, radius, radius}
+	return &Sphere{
+		Center:          center,
+		Radius:          radius,
+		Material:        material,
+		move:            false,
+		targetDirection: center,
+		bbox: interval.NewAABB(interval.FromPoints(
+			center.Add(rvec.Negative()),
+			center.Add(rvec),
+		)),
+	}
+}
+
+func (s *Sphere) BoundingBox() interval.AABB {
+	return s.bbox
 }
 
 func (s *Sphere) MoveTo(to vector.Point) {
 	s.move = true
 	s.targetDirection = to.Add(s.Center.Negative())
+	rvec := vector.Vector{s.Radius, s.Radius, s.Radius}
+	s.bbox = interval.CombineAABB(
+		s.bbox,
+		interval.NewAABB(interval.FromPoints(
+			to.Add(rvec.Negative()),
+			to.Add(rvec),
+		)))
+
 }
 
 func (s *Sphere) CenterAt(time float64) vector.Point {
@@ -52,7 +81,7 @@ func (s *Sphere) CenterAt(time float64) vector.Point {
 	return s.Center.Add(s.targetDirection.Multiply(time))
 }
 
-func (s *Sphere) Hit(r ray.Ray, rayT interval.Interval, rec *HitRecord) bool {
+func (s *Sphere) Hit(r *ray.Ray, rayT interval.Interval, rec *HitRecord) bool {
 	center := s.CenterAt(r.Time)
 	ocDistance := r.Origin.Add(center.Negative())
 	a := r.Direction.LengthSquared()
@@ -86,7 +115,7 @@ type Plane struct {
 	Material Material
 }
 
-func (s *Plane) Hit(r ray.Ray, rayT interval.Interval, rec *HitRecord) bool {
+func (s *Plane) Hit(r *ray.Ray, rayT interval.Interval, rec *HitRecord) bool {
 	denominator := vector.Dot(s.Normal, r.Direction)
 	if math.Abs(denominator) < 0.0 {
 		return false
@@ -106,10 +135,18 @@ func (s *Plane) Hit(r ray.Ray, rayT interval.Interval, rec *HitRecord) bool {
 
 type Hittables struct {
 	objects []Hittable
+	bbox    interval.AABB
 }
 
-func (hl *Hittables) Append(o ...Hittable) {
-	hl.objects = append(hl.objects, o...)
+func (hl *Hittables) BoundingBox() interval.AABB {
+	return hl.bbox
+}
+
+func (hl *Hittables) Append(objects ...Hittable) {
+	hl.objects = append(hl.objects, objects...)
+	for _, o := range objects {
+		hl.bbox = interval.CombineAABB(hl.bbox, o.BoundingBox())
+	}
 }
 
 func NewWorld(o ...Hittable) *Hittables {
@@ -118,7 +155,7 @@ func NewWorld(o ...Hittable) *Hittables {
 	}
 }
 
-func (hl *Hittables) Hit(r ray.Ray, rayT interval.Interval, rec *HitRecord) bool {
+func (hl *Hittables) Hit(r *ray.Ray, rayT interval.Interval, rec *HitRecord) bool {
 	hitAnything := false
 	closestSoFar := rayT.Max()
 	for _, h := range hl.objects {

@@ -195,13 +195,14 @@ type renderUnit struct {
 func (c *Camera) startRenderWorker(wg *sync.WaitGroup, input <-chan renderUnit, counter chan<- bool, world hittable.Hittable) {
 	wg.Add(1)
 	go func() {
-		for r := range input {
+		for pix := range input {
 			pixelColor := vector.Color{0, 0, 0}
 			for sample := 0; sample < c.samplesPerPixel; sample++ {
-				r := c.getRay(r.w, r.k)
+				r := c.getRay(pix.w, pix.k)
 				pixelColor = pixelColor.Add(c.rayColor(r, c.maxRayDepth, world)) //performance boost if pointer
+				ray.Put(r)
 			}
-			r.pn.string = ColorString(&pixelColor, c.samplesPerPixel)
+			pix.pn.string = ColorString(&pixelColor, c.samplesPerPixel)
 			counter <- true
 		}
 		wg.Done()
@@ -270,7 +271,7 @@ func (c *Camera) Render(filename string, world hittable.Hittable, numWorkers uin
 	c.logger.Flush()
 }
 
-func (c *Camera) rayColor(r ray.Ray, depth int, world hittable.Hittable) vector.Color {
+func (c *Camera) rayColor(r *ray.Ray, depth int, world hittable.Hittable) vector.Color {
 	rec := hittable.HitRecord{}
 	// If we've exceeded the ray bounce limit, no more light is gathered.
 	if depth <= 0 {
@@ -280,9 +281,10 @@ func (c *Camera) rayColor(r ray.Ray, depth int, world hittable.Hittable) vector.
 	if world.Hit(r, interval.Interval{0.001, math.Inf(1)}, &rec) {
 		if ok, scattered, attenuation := rec.Material.Scatter(r, &rec); ok {
 			return vector.Multiply(attenuation, c.rayColor(scattered, depth-1, world))
+		} else {
+			ray.Put(scattered)
+			return vector.Color{0, 0, 0}
 		}
-		return vector.Color{0, 0, 0}
-
 	}
 	unitDirection := vector.UnitVector(r.Direction)
 	a := 0.5 * (unitDirection.Y() + 1.0)
@@ -291,7 +293,7 @@ func (c *Camera) rayColor(r ray.Ray, depth int, world hittable.Hittable) vector.
 		Add(vector.Color{0.5, 0.7, 1.0}.Multiply(a))
 }
 
-func (c *Camera) getRay(i, j int) ray.Ray {
+func (c *Camera) getRay(i, j int) *ray.Ray {
 	// Get a randomly-sampled camera ray for the pixel at location i,j, originating from
 	// the camera defocus disk.
 	pixelCenter := c.pixelZeroLocation.
@@ -301,11 +303,12 @@ func (c *Camera) getRay(i, j int) ray.Ray {
 		// pixelSample := pixelCenter.Add(c.pixelSampleDisk(1.0))
 	pixelSample := pixelCenter.Add(c.pixelSampleSquare())
 	rayOrigin := c.defocusDiskSample()
-	return ray.Ray{
-		Origin:    rayOrigin,
-		Direction: pixelSample.Add(rayOrigin.Negative()),
-		Time:      randGen.Float64(),
-	}
+
+	ret := ray.Get()
+	ret.Origin = rayOrigin
+	ret.Direction = pixelSample.Add(rayOrigin.Negative())
+	ret.Time = randGen.Float64()
+	return ret
 }
 
 func (c *Camera) pixelSampleSquare() vector.Vector {

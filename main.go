@@ -17,30 +17,26 @@ func Scene1() {
 	materialRight := hittable.Metal{Albedo: vector.Color{0.8, 0.6, 0.2}, Fuzziness: 0.0}
 
 	world := hittable.NewWorld(
-		&hittable.Sphere{
-			Center:   vector.Point{0, -100.5, -1.0},
-			Material: &materialGround,
-			Radius:   100},
-		&hittable.Sphere{
-			Center:   vector.Point{0, 0, -1},
-			Material: &materialCenter,
-			Radius:   0.5},
-		&hittable.Sphere{
-			Center:   vector.Point{-1.0, 0, -1.0},
-			Material: &materialLeft,
-			Radius:   0.5},
-		&hittable.Sphere{
-			Center:   vector.Point{-1.0, 0, -1.0},
-			Material: &materialLeft,
-			Radius:   -0.4},
-		&hittable.Sphere{
-			Center:   vector.Point{1.0, 0, -1.0},
-			Material: &materialRight,
-			Radius:   0.5},
-		// &hittable.Plane{
-		// 	Center:   vector.Point{0, 0, -1.5},
-		// 	Material: &materialCenter,
-		// 	Normal:   vector.Vector{0, 0.5, 0.3}},
+		hittable.NewSphere(
+			vector.Point{0, -100.5, -1.0},
+			100,
+			&materialGround),
+		hittable.NewSphere(
+			vector.Point{0, 0, -1},
+			0.5,
+			&materialCenter),
+		hittable.NewSphere(
+			vector.Point{-1.0, 0, -1.0},
+			0.5,
+			&materialLeft),
+		hittable.NewSphere(
+			vector.Point{-1.0, 0, -1.0},
+			-0.4,
+			&materialLeft),
+		hittable.NewSphere(
+			vector.Point{1.0, 0, -1.0},
+			0.5,
+			&materialRight),
 	)
 
 	c := camera.Camera{}
@@ -65,14 +61,14 @@ func Scene2() {
 	r := math.Cos(math.Pi / 4)
 
 	world := hittable.NewWorld(
-		&hittable.Sphere{
-			Center:   vector.Point{-r, 0, -1.0},
-			Material: &materialLeft,
-			Radius:   r},
-		&hittable.Sphere{
-			Center:   vector.Point{r, 0, -1.0},
-			Material: &materialRight,
-			Radius:   r},
+		hittable.NewSphere(
+			vector.Point{-r, 0, -1.0},
+			r,
+			&materialLeft),
+		hittable.NewSphere(
+			vector.Point{r, 0, -1.0},
+			r,
+			&materialRight),
 	)
 
 	c := camera.Camera{}
@@ -85,10 +81,10 @@ func Scene3() {
 	materialGround := hittable.Lambertian{Albedo: vector.Color{0.5, 0.5, 0.5}}
 
 	world := hittable.NewWorld(
-		&hittable.Sphere{
-			Center:   vector.Point{0, -1000, 0},
-			Material: &materialGround,
-			Radius:   1000},
+		hittable.NewSphere(
+			vector.Point{0, -1000, 0},
+			1000,
+			&materialGround),
 	)
 
 	for a := -11; a < 11; a++ {
@@ -111,7 +107,7 @@ func Scene3() {
 					// glass
 					sphereMaterial = &hittable.Dielectric{IR: 1.5}
 				}
-				lilSphere := &hittable.Sphere{Center: center, Radius: 0.2, Material: sphereMaterial}
+				lilSphere := hittable.NewSphere(center, 0.2, sphereMaterial)
 				lilSphere.MoveTo(center.Add(vector.RandomBounded(0.0, 0.5)))
 				world.Append(lilSphere)
 			}
@@ -119,21 +115,23 @@ func Scene3() {
 	}
 
 	world.Append(
-		&hittable.Sphere{
-			Center:   vector.Point{0, 1, 0},
-			Radius:   1.0,
-			Material: &hittable.Dielectric{IR: 1.5},
-		},
-		&hittable.Sphere{
-			Center:   vector.Point{-4, 1, 0},
-			Radius:   1.0,
-			Material: &hittable.Lambertian{Albedo: vector.Color{0.4, 0.2, 0.1}},
-		},
-		&hittable.Sphere{
-			Center:   vector.Point{4, 1, 0},
-			Radius:   1.0,
-			Material: &hittable.Metal{Albedo: vector.Color{0.7, 0.6, 0.5}, Fuzziness: 0},
-		},
+		hittable.NewSphere(
+			vector.Point{0, 1, 0},
+			1.0,
+			&hittable.Dielectric{IR: 1.5},
+		),
+
+		hittable.NewSphere(
+			vector.Point{-4, 1, 0},
+			1.0,
+			&hittable.Lambertian{Albedo: vector.Color{0.4, 0.2, 0.1}},
+		),
+
+		hittable.NewSphere(
+			vector.Point{4, 1, 0},
+			1.0,
+			&hittable.Metal{Albedo: vector.Color{0.7, 0.6, 0.5}, Fuzziness: 0},
+		),
 	)
 
 	c := camera.Camera{}
@@ -148,9 +146,11 @@ func Scene3() {
 		camera.WithSamplesPerPixel(100),
 		camera.WithMaxRayDepth(50),
 	)
-	c.Render("test_ray.ppm", world, 1000)
+	c.Render("test_ray.ppm", world, 100)
 }
 
 func main() {
+	// ballast := make([]byte, 10<<30)
+	// fmt.Print(cap(ballast))
 	Scene3()
 }

@@ -7,7 +7,7 @@ import (
 )
 
 type Material interface {
-	Scatter(rIn ray.Ray, rec *HitRecord) (bool, ray.Ray, vector.Color)
+	Scatter(rIn *ray.Ray, rec *HitRecord) (bool, *ray.Ray, vector.Color)
 }
 
 type Lambertian struct {
@@ -24,12 +24,18 @@ type Lambertian struct {
 //		return true
 //	}
 
-func (l *Lambertian) Scatter(rIn ray.Ray, rec *HitRecord) (bool, ray.Ray, vector.Color) {
+func (l *Lambertian) Scatter(rIn *ray.Ray, rec *HitRecord) (bool, *ray.Ray, vector.Color) {
 	scatterDirection := rec.Normal.Add(vector.RandomUnitVector())
 	if scatterDirection.IsCloseToZero() {
 		scatterDirection = rec.Normal
 	}
-	return true, ray.Ray{Origin: rec.Point, Direction: scatterDirection, Time: rIn.Time}, l.Albedo
+
+	r := ray.Get()
+	r.Origin = rec.Point
+	r.Direction = scatterDirection
+	r.Time = rIn.Time
+
+	return true, r, l.Albedo
 
 }
 
@@ -46,13 +52,14 @@ type Metal struct {
 
 // }
 
-func (l *Metal) Scatter(rIn ray.Ray, rec *HitRecord) (bool, ray.Ray, vector.Color) {
+func (l *Metal) Scatter(rIn *ray.Ray, rec *HitRecord) (bool, *ray.Ray, vector.Color) {
 	reflected := vector.Reflect(vector.UnitVector(rIn.Direction), rec.Normal)
-	scattered := ray.Ray{
-		Origin:    rec.Point,
-		Direction: reflected.Add(vector.RandomUnitVector().Multiply(l.Fuzziness)),
-		Time:      rIn.Time,
-	}
+
+	scattered := ray.Get()
+	scattered.Origin = rec.Point
+	scattered.Direction = reflected.Add(vector.RandomUnitVector().Multiply(l.Fuzziness))
+	scattered.Time = rIn.Time
+
 	return vector.Dot(scattered.Direction, rec.Normal) > 0.0, scattered, l.Albedo
 
 }
@@ -61,7 +68,7 @@ type Dielectric struct {
 	IR float64 //Refraction Index
 }
 
-func (d *Dielectric) Scatter(rIn ray.Ray, rec *HitRecord) (bool, ray.Ray, vector.Color) {
+func (d *Dielectric) Scatter(rIn *ray.Ray, rec *HitRecord) (bool, *ray.Ray, vector.Color) {
 
 	attenuation := vector.Color{1, 1, 1}
 	refractionRatio := d.IR
@@ -82,10 +89,12 @@ func (d *Dielectric) Scatter(rIn ray.Ray, rec *HitRecord) (bool, ray.Ray, vector
 	} else {
 		direction = vector.Refract(unitDirection, rec.Normal, refractionRatio)
 	}
-	scattered := ray.Ray{
-		Origin:    rec.Point,
-		Direction: direction,
-		Time:      rIn.Time}
+
+	scattered := ray.Get()
+	scattered.Origin = rec.Point
+	scattered.Direction = direction
+	scattered.Time = rIn.Time
+
 	return true, scattered, attenuation
 
 }

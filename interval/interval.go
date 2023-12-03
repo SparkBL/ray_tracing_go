@@ -30,5 +30,19 @@ func (i *Interval) Clamp(x float64) float64 {
 	return x
 }
 
+func (i Interval) Expand(delta float64) Interval {
+	return Interval{
+		i[0] - delta/2,
+		i[1] + delta/2,
+	}
+}
+
+func CombineIntervals(a, b Interval) Interval {
+	return Interval{
+		min(a[0], b[0]),
+		max(a[1], b[1]),
+	}
+}
+
 var Empty Interval = Interval{math.Inf(1), math.Inf(-1)}
 var Universe Interval = Interval{math.Inf(-1), math.Inf(1)}
