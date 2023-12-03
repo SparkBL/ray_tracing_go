@@ -111,7 +111,9 @@ func Scene3() {
 					// glass
 					sphereMaterial = &hittable.Dielectric{IR: 1.5}
 				}
-				world.Append(&hittable.Sphere{Center: center, Radius: 0.2, Material: sphereMaterial})
+				lilSphere := &hittable.Sphere{Center: center, Radius: 0.2, Material: sphereMaterial}
+				lilSphere.MoveTo(center.Add(vector.RandomBounded(0.0, 0.5)))
+				world.Append(lilSphere)
 			}
 		}
 	}
@@ -141,36 +143,14 @@ func Scene3() {
 			vector.Vector{13, 2, 3},
 			vector.Vector{0, 0, 0},
 		),
-		//camera.WithFocus(10.0, 3.4),
+		camera.WithFocus(0.02, 10.0),
 		camera.WithImageWidth(600),
 		camera.WithSamplesPerPixel(100),
-		camera.WithMaxRayDepth(100),
+		camera.WithMaxRayDepth(50),
 	)
-	c.Render("test_ray.ppm", world, 16)
+	c.Render("test_ray.ppm", world, 1000)
 }
 
 func main() {
-	Scene1()
-	// debug.SetGCPercent(-1)
-
+	Scene3()
 }
-
-// func OutputImage(width, height int) {
-// 	out, _ := os.Create("test.ppm")
-// 	logger := bufio.NewWriter(os.Stdout)
-// 	out.WriteString(fmt.Sprintf("P3\n%d %d\n255\n", width, height))
-// 	for i := 0; i < height; i++ {
-// 		logger.WriteString(fmt.Sprintf("\rScanlines remaining: %d ", height-i))
-// 		logger.Flush()
-// 		for j := 0; j < width; j++ {
-// 			c := vector.Vector{
-// 				float64(j) / (float64(width) - 1),
-// 				float64(i) / (float64(height) - 1),
-// 				float64(0)}
-
-// 			out.WriteString(vector.ColorString(&c))
-// 		}
-// 	}
-// 	out.Close()
-// 	logger.Flush()
-// }

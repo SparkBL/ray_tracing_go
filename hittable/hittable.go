@@ -33,13 +33,28 @@ type Hittable interface {
 }
 
 type Sphere struct {
-	Center   vector.Point
-	Radius   float64
-	Material Material
+	Center          vector.Point
+	Radius          float64
+	Material        Material
+	move            bool
+	targetDirection vector.Vector
+}
+
+func (s *Sphere) MoveTo(to vector.Point) {
+	s.move = true
+	s.targetDirection = to.Add(s.Center.Negative())
+}
+
+func (s *Sphere) CenterAt(time float64) vector.Point {
+	if !s.move {
+		return s.Center
+	}
+	return s.Center.Add(s.targetDirection.Multiply(time))
 }
 
 func (s *Sphere) Hit(r ray.Ray, rayT interval.Interval, rec *HitRecord) bool {
-	ocDistance := r.Origin.Add(s.Center.Negative())
+	center := s.CenterAt(r.Time)
+	ocDistance := r.Origin.Add(center.Negative())
 	a := r.Direction.LengthSquared()
 	halfB := vector.Dot(ocDistance, r.Direction)
 	c := ocDistance.LengthSquared() - s.Radius*s.Radius

@@ -26,6 +26,7 @@ func putRay(r *Ray) {
 type Ray struct {
 	Origin    vector.Point
 	Direction vector.Vector
+	Time      float64
 }
 
 func New() *Ray {

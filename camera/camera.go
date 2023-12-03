@@ -304,6 +304,7 @@ func (c *Camera) getRay(i, j int) ray.Ray {
 	return ray.Ray{
 		Origin:    rayOrigin,
 		Direction: pixelSample.Add(rayOrigin.Negative()),
+		Time:      randGen.Float64(),
 	}
 }
 
