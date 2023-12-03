@@ -22,7 +22,7 @@ func Scene1() {
 			Material: &materialGround,
 			Radius:   100},
 		&hittable.Sphere{
-			Center:   vector.Point{0, 0, -1.0},
+			Center:   vector.Point{0, 0, -1},
 			Material: &materialCenter,
 			Radius:   0.5},
 		&hittable.Sphere{
@@ -45,13 +45,15 @@ func Scene1() {
 
 	c := camera.Camera{}
 	c.Init(
+		// camera.WithSamplesPerPixel(100),
+		// camera.WithMaxRayDepth(50),
 		camera.WithVFOV(20),
 		camera.WithPosition(vector.Vector{0, 1, 0},
 			vector.Vector{-2, 2, 1},
 			vector.Vector{0, 0, -1},
 		),
-		//camera.WithFocus(10.0, 3.4),
-		camera.WithImageWidth(1000),
+		camera.WithFocus(10.0, 3.4),
+		camera.WithImageWidth(600),
 	)
 	c.Render("test_ray.ppm", world, 16)
 }
@@ -74,7 +76,7 @@ func Scene2() {
 	)
 
 	c := camera.Camera{}
-	c.Init(camera.WithImageWidth(50))
+	c.Init(camera.WithImageWidth(500))
 	c.Render("test_ray.ppm", world, 16)
 }
 
@@ -148,7 +150,7 @@ func Scene3() {
 }
 
 func main() {
-	Scene3()
+	Scene1()
 	// debug.SetGCPercent(-1)
 
 }

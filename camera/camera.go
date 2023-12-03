@@ -150,8 +150,9 @@ func (c *Camera) Init(opts ...CameraOption) {
 		c.imageHeight = 1
 	}
 
-	// Determine viewport dimensions.
 	c.center = c.lookFrom
+
+	// Determine viewport dimensions.
 	//We assume focal_length == focus_distance
 	theta := util.DegressToRadians(c.verticalFieldOfView)
 	h := math.Tan(theta / 2)
@@ -297,10 +298,12 @@ func (c *Camera) getRay(i, j int) ray.Ray {
 		Add(c.pixelDeltaU.Multiply(float64(i))).
 		Add(c.pixelDeltaV.Multiply(float64(j)))
 
+		// pixelSample := pixelCenter.Add(c.pixelSampleDisk(1.0))
 	pixelSample := pixelCenter.Add(c.pixelSampleSquare())
+	rayOrigin := c.defocusDiskSample()
 	return ray.Ray{
-		Origin:    c.defocusDiskSample(),
-		Direction: pixelSample.Add(c.center.Negative()),
+		Origin:    rayOrigin,
+		Direction: pixelSample.Add(rayOrigin.Negative()),
 	}
 }
 
@@ -311,11 +314,16 @@ func (c *Camera) pixelSampleSquare() vector.Vector {
 	return c.pixelDeltaU.Multiply(px).Add(c.pixelDeltaV.Multiply(py))
 }
 
+func (c *Camera) pixelSampleDisk(radius float64) vector.Vector {
+	p := vector.RandomInUnitDisk().Multiply(radius)
+	return c.pixelDeltaU.Multiply(p[0]).Add(c.pixelDeltaV.Multiply(p[1]))
+}
+
 func (c *Camera) defocusDiskSample() vector.Point {
-	p := vector.RandomInUnitDisk()
 	if c.defocusAngle <= 0 {
 		return c.center
 	}
+	p := vector.RandomInUnitDisk()
 	return c.center.Add(c.defocusDiskU.Multiply(p[0])).Add(c.defocusDiskV.Multiply(p[1]))
 }
 
