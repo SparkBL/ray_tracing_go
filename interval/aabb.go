@@ -41,7 +41,7 @@ func CombineAABB(a, b AABB) AABB {
 	}
 }
 
-func (a *AABB) Axis(n int) Interval {
+func (a AABB) Axis(n int) Interval {
 	if n > 2 {
 		return a[0]
 	}
@@ -68,12 +68,16 @@ func (a *AABB) Axis(n int) Interval {
 // }
 
 func (a *AABB) Hit(rIn *ray.Ray, rayT Interval) bool {
-	for i, e := range a {
+	for i := range a {
 
 		invD := 1 / rIn.Direction[i]
 		orig := rIn.Origin[i]
-		t0 := (e[0] - orig) * invD
-		t1 := (e[1] - orig) * invD
+		t0 := (a[i][0] - orig) * invD
+		t1 := (a[i][1] - orig) * invD
+
+		if invD < 0 {
+			t0, t1 = t1, t0
+		}
 
 		if t0 > rayT[0] {
 			rayT[0] = t0

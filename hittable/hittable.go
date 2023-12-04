@@ -5,6 +5,7 @@ import (
 	"ray_tracing/interval"
 	"ray_tracing/ray"
 	"ray_tracing/vector"
+	"sort"
 )
 
 type HitRecord struct {
@@ -149,6 +150,10 @@ func (hl *Hittables) Append(objects ...Hittable) {
 	}
 }
 
+func (hl *Hittables) ToBVHTree() *BVHNode {
+	return NewBHVTree(hl.objects...)
+}
+
 func NewWorld(o ...Hittable) *Hittables {
 	return &Hittables{
 		objects: o,
@@ -165,4 +170,59 @@ func (hl *Hittables) Hit(r *ray.Ray, rayT interval.Interval, rec *HitRecord) boo
 		}
 	}
 	return hitAnything
+}
+
+func boxCompare(h1, h2 Hittable, axis int) bool {
+	return h1.BoundingBox().Axis(axis).Min() < h2.BoundingBox().Axis(axis).Min()
+}
+
+type BVHNode struct {
+	left, right Hittable
+	bbox        interval.AABB
+}
+
+func NewBHVTree(src ...Hittable) *BVHNode {
+	axis := randGen.Intn(2)
+
+	node := BVHNode{}
+	switch len(src) {
+	case 1:
+		node.left, node.right = src[0], src[0]
+	case 2:
+		if boxCompare(src[0], src[1], axis) {
+			node.left = src[0]
+			node.right = src[1]
+		} else {
+			node.left = src[1]
+			node.right = src[0]
+		}
+	default:
+		sort.Slice(src, func(i, j int) bool { return boxCompare(src[i], src[j], axis) })
+		middle := len(src) / 2
+		node.left = NewBHVTree(src[:middle]...)
+		node.right = NewBHVTree(src[middle:]...)
+	}
+	node.bbox = interval.CombineAABB(node.left.BoundingBox(), node.right.BoundingBox())
+	return &node
+}
+
+func (b *BVHNode) BoundingBox() interval.AABB {
+	return b.bbox
+}
+
+func (b *BVHNode) Hit(r *ray.Ray, rayT interval.Interval, rec *HitRecord) bool {
+	if !b.bbox.Hit(r, rayT) {
+		return false
+	}
+
+	var maxT float64
+	hitLeft := b.left.Hit(r, rayT, rec)
+	if hitLeft {
+		maxT = rec.T
+	} else {
+		maxT = rayT.Max()
+	}
+	hitRight := b.right.Hit(r, interval.Interval{rayT.Min(), maxT}, rec)
+
+	return hitLeft || hitRight
 }

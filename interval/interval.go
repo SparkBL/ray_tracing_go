@@ -4,12 +4,16 @@ import "math"
 
 type Interval [2]float64
 
-func (i *Interval) Min() float64 {
+func (i Interval) Min() float64 {
 	return i[0]
 }
 
-func (i *Interval) Max() float64 {
+func (i Interval) Max() float64 {
 	return i[1]
+}
+
+func (i Interval) Size() float64 {
+	return i[1] - i[0]
 }
 
 func (i *Interval) Contains(x float64) bool {

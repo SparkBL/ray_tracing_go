@@ -6,6 +6,7 @@ import (
 	"ray_tracing/camera"
 	"ray_tracing/hittable"
 	"ray_tracing/vector"
+	"runtime/debug"
 )
 
 func Scene1() {
@@ -51,7 +52,7 @@ func Scene1() {
 		camera.WithFocus(10.0, 3.4),
 		camera.WithImageWidth(600),
 	)
-	c.Render("test_ray.ppm", world, 16)
+	c.Render("test_ray.ppm", world, 12)
 }
 
 func Scene2() {
@@ -142,15 +143,14 @@ func Scene3() {
 			vector.Vector{0, 0, 0},
 		),
 		camera.WithFocus(0.02, 10.0),
-		camera.WithImageWidth(600),
+		camera.WithImageWidth(1600),
 		camera.WithSamplesPerPixel(100),
 		camera.WithMaxRayDepth(50),
 	)
-	c.Render("test_ray.ppm", world, 100)
+	c.Render("test_ray.ppm", world.ToBVHTree(), 12)
 }
 
 func main() {
-	// ballast := make([]byte, 10<<30)
-	// fmt.Print(cap(ballast))
+	debug.SetGCPercent(1000)
 	Scene3()
 }
