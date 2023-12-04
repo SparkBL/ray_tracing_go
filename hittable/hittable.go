@@ -12,6 +12,7 @@ type HitRecord struct {
 	Point       vector.Point
 	Normal      vector.Vector
 	Material    Material
+	U, V        float64
 	T           float64
 	IsFrontFace bool
 }

@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"ray_tracing/camera"
 	"ray_tracing/hittable"
+	"ray_tracing/texture"
 	"ray_tracing/vector"
 	"runtime/debug"
 )
@@ -81,6 +82,12 @@ func Scene3() {
 	// World
 	materialGround := hittable.Lambertian{Albedo: vector.Color{0.5, 0.5, 0.5}}
 
+	checker := texture.NewCheckerTexture(
+		0.32,
+		texture.NewSolidColor(vector.Color{.2, .3, .1}),
+		texture.NewSolidColor(vector.Color{.9, .9, .9}),
+	)
+
 	world := hittable.NewWorld(
 		hittable.NewSphere(
 			vector.Point{0, -1000, 0},
@@ -143,7 +150,7 @@ func Scene3() {
 			vector.Vector{0, 0, 0},
 		),
 		camera.WithFocus(0.02, 10.0),
-		camera.WithImageWidth(1600),
+		camera.WithImageWidth(800),
 		camera.WithSamplesPerPixel(100),
 		camera.WithMaxRayDepth(50),
 	)
